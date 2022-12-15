@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="cn">
+  <head>
+    <meta charset="utf-8">
+    <!-- <title>Random Dot Motion Configuration</title> -->
+    <title>随机点属性控制</title>
+    <style type="text/css">
+html {
+  background-image: url("res/bg.png");
+  background-size: 100%;
+  background-color: #1E1E1E;
+  background-position: left bottom;
+  background-repeat: no-repeat;
+  color: white;
+  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100%;
+}
+
+body {
+  margin: 0 auto;
+  padding-top: 50px;
+  padding-bottom: 50px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+div#left {
+  float: left;
+  width: 48%;
+  margin: 10px;
+}
+div#right {
+  float: right;
+  width: 48%;
+  margin: 10px;
+}
+div.aligned {
+  margin: 0 auto;
+  padding: 20px;
+  width: 80%;
+  text-align: left;
+}
+
+#flavor {
+  text-align: center;
+}
+
+input[name=flavor] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+input[name=flavor] + img {
+  width: 15%;
+  margin: 0.5%;
+  cursor: pointer;
+}
+input[name=flavor]:hover + img {
+  outline: thin solid darkgray;
+}
+input[name=flavor]:checked + img {
+  outline: 2px solid gray;
+}
+
+input[type=range] {
+  width: 75%;
+}
+input[type=number] {
+  width: 10%;
+}
+
+input[type=submit] {
+  float: right;
+  border: 0px;
+  background-color: rgba(0, 0, 0, 0);
+  background-image: url('res/start.png');
+  width: 92px;
+  height: 127px;
+}
+    </style>
+    <script type="text/javascript">
+function rangeupdate(id)
+{
+  var slider = document.querySelector("input#" + id)
+  var text = document.querySelector("span#" + id)
+  text.innerHTML = slider.value
+}
+
+function autocoherence()
+{
+  var auto = document.querySelector("input#auto")
+  var coh = document.querySelector("input#coherence")
+  var text = document.querySelector("span#coherence")
+  if (auto.checked) {
+    coh.disabled = true
+    text.innerHTML = '自动'
+  }
+  else {
+    coh.disabled = false
+    text.innerHTML = coh.value
+  }
+}
+    </script>
+  </head>
+  <body>
+    <!-- <header>Please set RDM parameters</header> -->
+    <div id="left">
+      <h1>随机点运动任务</h1>
+      <div id="preview">
+      </div>
+    </div>
+    <div id="right">
+      <form enctype="application/json" method="post">
+        <fieldset id="dottype">
+          <legend>请选择随机点类型</legend>
+        <label>
+          <input type="radio" name="flavor" value="1">
+          <img src="res/flavor1.png" alt="same, random position"/>
+        </label>
+        <label>
+          <input type="radio" name="flavor" value="2">
+          <img src="res/flavor2.png" alt="same, random walk"/>
+        </label>
+        <label>
+          <input type="radio" name="flavor" checked="checked" value="3">
+          <img src="res/flavor3.png" alt="same, random direction"/>
+        </label>
+        <!-- <br/> -->
+        <label>
+          <input type="radio" name="flavor" value="4">
+          <img src="res/flavor4.png" alt="different, random position"/>
+        </label>
+        <label>
+          <input type="radio" name="flavor" value="5">
+          <img src="res/flavor5.png" alt="different, random walk"/>
+        </label>
+        <label>
+          <input type="radio" name="flavor" value="6">
+          <img src="res/flavor6.png" alt="different, random direction"/>
+        </label>
+        </fieldset>
+        <br/>
+        <fieldset>
+          <legend>调整参数</legend>
+          <div class="aligned">
+            <label>难度: </label>
+            <input id="coherence" type="range" name="coherence" min="1" max="100" value="40" oninput="rangeupdate('coherence')">
+            <span id="coherence">40</span>
+          </div>
+          <div class="aligned">
+            <label> 速度: </label>
+            <input id="speed" type="range" name="speed" min="1" max="10" value="2" oninput="rangeupdate('speed')">
+            <span id="speed">2</span>
+          </div>
+          <div class="aligned">
+            <label> 密度: </label>
+            <input id="ndots" type="range" name="ndots" min="50" max="500" value="200" step="10" oninput="rangeupdate('ndots')">
+            <span id="ndots">200</span>
+          </div>
+        </fieldset>
+        <br/>
+        <fieldset>
+          <legend>设置次数</legend>
+          <div class="aligned">
+            共
+            <input id="ntrials" type="number" name="ntrials", min="3", max="20", value="8">
+            组刺激，预计用时约
+            <span>16</span>
+            秒
+          </div>
+        </fieldset>
+        <br/>
+        <input type="submit" value="">
+        <br/>
+      </form>
+    </div>
+    <!-- <footer>Copyright (C) 2022  LiTuX, all wrongs reserved.</footer> -->
+  </body>
+</html>
