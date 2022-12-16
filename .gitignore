@@ -1,0 +1,11 @@
+# log files
+*.log
+
+# editor backup
+*.bak
+*~
+
+# python
+*.pyc
+__pycache__
+
