@@ -7,7 +7,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="screen-orientation" content="landscape">
     <meta name="full-screen" content="yes">
-    <title>Response</title>
+    <!--link rel="icon" href="rdm.gif" type="image/gif" /-->
+    <title>请作答</title>
 
     <style type="text/css">
 html {
@@ -15,6 +16,7 @@ html {
     color: white;
     height: 100vh;
     width: 100vw;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -34,7 +36,6 @@ div.container{
     padding: 0;
     background-color: black;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
 }
 div.container > div{
     height: 20vh;
@@ -65,9 +66,7 @@ div#right{
     <script type="text/javascript">
 async function choose(which)
 {
-    // console.log(which)
     data = {
-        'client': navigator.userAgent,
         'response': which,
     }
     let response = await fetch('/', {
@@ -82,15 +81,19 @@ async function choose(which)
         alert(`Error : ${response.status}, ${response.statusText}`)
     }
     // TODO: update something? e.g., trial number?
+    console.log(response)
 }
     </script>
 </head>
 <body>
-    <div class="container left" onclick="choose('left')">
+    <div class="container left" onmousedown="choose('left')">
+    <!--div class="container left" ontouchstart="choose('left')"-->
         <div id="left"></div>
     </div>
-    <div class="container right" onclick="choose('right')">
+    <div class="container right" onmousedown="choose('right')">
+    <!--div class="container right" ontouchstart="choose('right')"-->
         <div id="right"></div>
     </div>
+    <!-- <footer>Copyright (C) 2022  LiTuX, all wrongs reserved.</footer> -->
 </body>
 </html>
