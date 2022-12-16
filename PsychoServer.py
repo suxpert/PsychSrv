@@ -57,9 +57,9 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/status':
             # send status as json to client
-            mesg, state = self.get_state(False)
+            mesg, state = self.server.get_state(False)
             self._set_headers('.json')
-            self.wfile.write(json.dumps(state))
+            self.wfile.write(json.dumps(state).encode("utf-8"))
             # if mesg == 'sync':
             #     self._set_headers('.json')
             #     self.wfile.write(json.dumps(state))
@@ -67,21 +67,29 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
             #     pass
         else:
             SimpleHTTPRequestHandler.do_GET(self)
-        self.server.set_state('get: '+ self.path)
+        state = {
+            "client": self.headers['User-Agent']
+        }
+        self.server.set_state('get: '+ self.path, state)
 
     def do_POST(self):
         res = {}
         length = int(self.headers['Content-Length'])
         content = self.rfile.read(length)
-        # print(content)
-        self._set_headers('.json')
+        print(self.headers)
+        print(content)
         if self.headers['Content-Type'] == 'application/json':
             res = json.loads(content)
-            # print(res)
+            print(res)
             if 'response' in res:
                 # simulate key press
                 pyautogui.press(res['response'])
 
+        mesg, state = self.server.get_state(False)
+        self._set_headers('.json')
+        self.wfile.write(json.dumps(state).encode("utf-8"))
+
+        res['client'] = self.headers['User-Agent']
         self.server.set_state('post: ' + self.path, res)
 
 
