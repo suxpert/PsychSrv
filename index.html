@@ -1,177 +1,259 @@
 <!DOCTYPE html>
-<html lang="cn">
-  <head>
-    <meta charset="utf-8">
-    <!-- <title>Random Dot Motion Configuration</title> -->
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="screen-orientation" content="landscape">
+    <meta name="full-screen" content="yes">
+    <!--link rel="icon" href="rdm.gif" type="image/gif" /-->
     <title>随机点属性控制</title>
+
     <style type="text/css">
 html {
-  background-image: url("res/bg.png");
-  background-size: 100%;
-  background-color: #1E1E1E;
-  background-position: left bottom;
-  background-repeat: no-repeat;
-  color: white;
-  font-family: Arial, Helvetica, sans-serif;
-  min-height: 100%;
+    background-image: url("res/bg.png");
+    background-size: 100%;
+    background-color: #1E1E1E;
+    background-position: left bottom;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: white;
+    font-family: Arial, Helvetica, sans-serif;
+    height: 100vh;
+    width: 100vw;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  margin: 0 auto;
-  padding-top: 50px;
-  padding-bottom: 50px;
-  padding-left: 20px;
-  padding-right: 20px;
-}
-div#left {
-  float: left;
-  width: 48%;
-  margin: 10px;
-}
-div#right {
-  float: right;
-  width: 48%;
-  margin: 10px;
-}
-div.aligned {
-  margin: 0 auto;
-  padding: 20px;
-  width: 80%;
-  text-align: left;
+    margin: 6vh auto;
+    padding: 0;
+    height: 88vh;
+    width: 91vw;
 }
 
-#flavor {
-  text-align: center;
+div.container {
+    height: 88vh;
+    width: 45vw;
+    margin: 0;
+    padding: 0;
+}
+div.left {
+    float: left;
+}
+div.right {
+    float: right;
+}
+figure {
+    margin: 0 auto;
+    width: 40vw;
+    text-align: center;
+}
+figure>img {
+    width: 30vw;
+    height: auto;
+}
+div.aligned {
+	margin: 2vh auto;
+	padding: 0;
+	width: 40vw;
+	height: 5vh;
+	text-align: left;
+}
+
+fieldset {
+    margin: 1.0vh 0;
+    text-align: center;
 }
 
 input[name=flavor] {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
 }
 input[name=flavor] + img {
-  width: 15%;
-  margin: 0.5%;
-  cursor: pointer;
+	width: 6.2vw;
+	margin: 0 0.1vw;
+	cursor: pointer;
 }
 input[name=flavor]:hover + img {
-  outline: thin solid darkgray;
+	outline: thin solid gray;
 }
 input[name=flavor]:checked + img {
-  outline: 2px solid gray;
+	outline: 2px solid darkgray;
 }
 
 input[type=range] {
-  width: 75%;
+	width: 75%;
 }
 input[type=number] {
-  width: 10%;
+	width: 15%;
 }
 
-input[type=submit] {
-  float: right;
-  border: 0px;
-  background-color: rgba(0, 0, 0, 0);
-  background-image: url('res/start.png');
-  width: 92px;
-  height: 127px;
+/* input[type=submit] { */
+div#submit {
+	float: right;
+	border: 0px;
+	cursor: pointer;
+	background-color: rgba(0, 0, 0, 0);
+	background-image: url('res/start.png');
+	width: 92px;
+	height: 127px;
+}
+div#submit:hover {
+	outline: thin solid gray;
 }
     </style>
     <script type="text/javascript">
-function rangeupdate(id)
+function update_preview(radio)
 {
-  var slider = document.querySelector("input#" + id)
-  var text = document.querySelector("span#" + id)
-  text.innerHTML = slider.value
+    var type = radio.value
+    var dir  = 180 * (Math.random() < 0.5)
+    var preview = document.querySelector("figure#preview>img")
+    var caption = document.querySelector("figure#preview>figcaption")
+    preview.src = "res/demo_" + type + "-" + dir + ".gif"
+    caption.innerText = type
 }
 
-function autocoherence()
+function update_range(slider)
 {
-  var auto = document.querySelector("input#auto")
-  var coh = document.querySelector("input#coherence")
-  var text = document.querySelector("span#coherence")
-  if (auto.checked) {
-    coh.disabled = true
-    text.innerHTML = '自动'
-  }
-  else {
-    coh.disabled = false
-    text.innerHTML = coh.value
-  }
+    var text = document.querySelector("span#" + slider.name)
+    text.innerText = slider.value
+}
+
+function update_duration()
+{
+    var list = document.querySelector("select#ntrials")
+    var ntrials = list.selectedOptions[0].text
+    var duration = document.querySelector("span#duration")
+    duration.innerText = Math.round(ntrials * 2.5)
+}
+
+async function submit()
+{
+    var form = document.querySelector("form")
+    var type = form.querySelector("input[name=flavor]:checked").value.split('-')
+    var coh = form.querySelector("input[name=coherence]").value
+    var speed = form.querySelector("input[name=speed]").value
+    var ndots = form.querySelector("input[name=ndots]").value
+    var ntrials = form.querySelector("select#ntrials").value
+
+    data = {
+        'signal': type[0],
+        'noise': type[1],
+        'ndots': parseInt(ndots),
+        'size': 5,
+        'life': 5,
+        'duration': 2,
+        'speed': parseInt(speed),
+        'coherence': parseInt(coh),
+        'ntrials': parseInt(ntrials),
+        'response': "enter",
+    }
+    let response = await fetch('/', {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+        alert(`Error : ${response.status}, ${response.statusText}`)
+    }
+    // console.log(response.headers)
+    // console.log(response.body)
+    setTimeout(function(){
+        location.replace('/do.html')
+    }, 1000)
 }
     </script>
   </head>
   <body>
-    <!-- <header>Please set RDM parameters</header> -->
-    <div id="left">
+    <div class="container left">
       <h1>随机点运动任务</h1>
-      <div id="preview">
-      </div>
+      <figure id="preview">
+          <img src=''/>
+          <figcaption>
+          </figcaption>
+      </figure>
     </div>
-    <div id="right">
-      <form enctype="application/json" method="post">
+    <div class="container right">
+      <form method="post">
         <fieldset id="dottype">
           <legend>请选择随机点类型</legend>
         <label>
-          <input type="radio" name="flavor" value="1">
+          <input type="radio" name="flavor" value="same-position" onclick="update_preview(this)">
           <img src="res/flavor1.png" alt="same, random position"/>
         </label>
         <label>
-          <input type="radio" name="flavor" value="2">
+          <input type="radio" name="flavor" value="same-walk" onclick="update_preview(this)">
           <img src="res/flavor2.png" alt="same, random walk"/>
         </label>
         <label>
-          <input type="radio" name="flavor" checked="checked" value="3">
+          <input type="radio" name="flavor" value="same-direction" onclick="update_preview(this)" checked="checked">
           <img src="res/flavor3.png" alt="same, random direction"/>
         </label>
-        <!-- <br/> -->
         <label>
-          <input type="radio" name="flavor" value="4">
+          <input type="radio" name="flavor" value="different-position" onclick="update_preview(this)">
           <img src="res/flavor4.png" alt="different, random position"/>
         </label>
         <label>
-          <input type="radio" name="flavor" value="5">
+          <input type="radio" name="flavor" value="different-walk" onclick="update_preview(this)">
           <img src="res/flavor5.png" alt="different, random walk"/>
         </label>
         <label>
-          <input type="radio" name="flavor" value="6">
+          <input type="radio" name="flavor" value="different-direction" onclick="update_preview(this)">
           <img src="res/flavor6.png" alt="different, random direction"/>
         </label>
         </fieldset>
-        <br/>
         <fieldset>
           <legend>调整参数</legend>
           <div class="aligned">
             <label>难度: </label>
-            <input id="coherence" type="range" name="coherence" min="1" max="100" value="40" oninput="rangeupdate('coherence')">
+            <input type="range" name="coherence" min="10" max="80" value="40" step="10" oninput="update_range(this)">
             <span id="coherence">40</span>
           </div>
           <div class="aligned">
             <label> 速度: </label>
-            <input id="speed" type="range" name="speed" min="1" max="10" value="2" oninput="rangeupdate('speed')">
+            <input type="range" name="speed" min="1" max="9" value="2" oninput="update_range(this)">
             <span id="speed">2</span>
           </div>
           <div class="aligned">
             <label> 密度: </label>
-            <input id="ndots" type="range" name="ndots" min="50" max="500" value="200" step="10" oninput="rangeupdate('ndots')">
+            <input type="range" name="ndots" min="100" max="500" value="300" step="50" oninput="update_range(this)">
             <span id="ndots">200</span>
           </div>
         </fieldset>
-        <br/>
         <fieldset>
           <legend>设置次数</legend>
           <div class="aligned">
             共
-            <input id="ntrials" type="number" name="ntrials", min="3", max="20", value="8">
+            <!--input id="ntrials" type="number" name="ntrials", min="3", max="20", value="8">
+            <input list="trials" id="ntrials" name="ntrials" />
+            <datalist id="trials"-->
+            <select id="ntrials" name="ntrials" onchange="update_duration()">
+              <option>4</option>
+              <option>5</option>
+              <option selected="selected">6</option>
+              <option>7</option>
+              <option>8</option>
+              <option>9</option>
+              <option>10</option>
+              <option>11</option>
+              <option>12</option>
+              <option>13</option>
+              <option>14</option>
+              <option>15</option>
+            </select>
             组刺激，预计用时约
-            <span>16</span>
+            <span id="duration">15</span>
             秒
           </div>
         </fieldset>
-        <br/>
-        <input type="submit" value="">
-        <br/>
+        <!--input type="submit" value=""-->
+        <div id="submit" onclick="submit()"></div>
       </form>
     </div>
     <!-- <footer>Copyright (C) 2022  LiTuX, all wrongs reserved.</footer> -->
