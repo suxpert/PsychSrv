@@ -77,7 +77,7 @@ def main():
     # instruction
     text_instr = visual.TextStim(
         win=win,
-        name='text_instr',
+        name='instr',
         text='',
         font='Arial',
         color='white',
@@ -88,7 +88,7 @@ def main():
     # we can reuse instruction as countdown
     text_countdown = visual.TextStim(
         win=win,
-        name='text_countdown',
+        name='countdown',
         text='',
         font='Arial',
         color='white',
@@ -102,20 +102,38 @@ def main():
 
     # setup server and wait for connection
     httpd = setupserver()
+    httpd.start()
 
     text_instr.setText(f'Waiting at\n{httpd.server_addr}')
     text_instr.draw()
     win.flip()
 
-    httpd.handle_request()
+    while True:
+        core.wait(0.1)
+        mesg, state = httpd.get_state(False)
+        if mesg != 'init':
+            print(mesg, state)
+            break;
+
+    # httpd.handle_request()
     # keybd.waitKeys(keyList=['space', 'enter'])
-    text_instr.setText(f'Waiting for configuration')
+    text_instr.setText(f'connected.\nWaiting configuration')
     text_instr.draw()
     win.flip()
-    keybd.waitKeys(keyList=['space', 'enter'])
-    httpd.start()
+
+    # keybd.waitKeys(keyList=['space', 'enter'])
     
+    while True:
+        core.wait(0.1)
+        mesg, state = httpd.get_state(False)
+        # print(mesg, state)
+        if mesg == 'post: /':
+            break;
+
     # configuration from remote
+    # mesg, state = httpd.get_state(False)
+    print(mesg, state)
+
     config = {
         'signal': 'same',
         'noise': 'direction',
@@ -126,6 +144,7 @@ def main():
         'ntrials': 8,
         'duration': 2,
     }
+    config = state
 
     # the dot stimulus have to be create after configuration
     dots = visual.DotStim(
@@ -158,6 +177,8 @@ def main():
 
     # prepare trial order and loop for trials
     for trial in range(config['ntrials']):
+        httpd.set_state('trial', {'left', config['ntrials']-trial-1})
+
         # the trial:
         realdir = ['left', 'right']
         thisdir = np.random.randint(2)
