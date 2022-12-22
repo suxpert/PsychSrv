@@ -80,8 +80,11 @@ async function choose(which)
     if (!response.ok) {
         alert(`Error : ${response.status}, ${response.statusText}`)
     }
-    // TODO: update something? e.g., trial number?
-    console.log(response)
+    var returned = await response.json()
+    // console.log(returned)
+    if ( returned.remain == 0) {
+        location.href = "/"
+    }
 }
     </script>
 </head>
