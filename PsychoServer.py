@@ -7,7 +7,7 @@ import pyautogui
 import threading
 
 from http.server import SimpleHTTPRequestHandler, HTTPServer
-from psychopy import core
+# from psychopy import core
 
 
 class MyHTTPServer(HTTPServer):
@@ -15,19 +15,24 @@ class MyHTTPServer(HTTPServer):
         super().__init__(server_address, RequestHandlerClass, bind_and_activate)
         self.server_addr = '%s:%d' % (socket.gethostbyname(self.server_name), self.server_port)
         self.server_thread = threading.Thread(target=self.serve_forever)
-        self.mesg = 'init'
-        self.stat = {}
+        self.state = {'state': 'init'}
+        self.query = ('', {})
     
-    def set_state(self, mesg='', stat={}):
-        self.mesg = mesg
-        self.stat = stat
+    def set_state(self, **kwargs):
+        if kwargs:
+            print('state = ', kwargs)
+        self.state = kwargs
     
-    def get_state(self, clear=True):
-        mesg = self.mesg
-        stat = self.stat
+    def set_query(self, query='', **kwargs):
+        if kwargs:
+            print(f"query = '{query}', ", kwargs)
+        self.query = (query, kwargs)
+
+    def get_query(self, clear=False):
+        query, param = self.query
         if clear:
-            self.set_state()
-        return mesg, stat
+            self.query = ('', {})
+        return query, param
 
     def run(self):
             try:
@@ -49,7 +54,7 @@ class MyHTTPServer(HTTPServer):
 class MyRequestHandler(SimpleHTTPRequestHandler):
     def _set_headers(self, type='.html'):
         self.send_response(200)
-        self.send_header('Accept', 'application/json')
+        # self.send_header('Accept', 'application/json')
         # self.send_header('Content-type', 'application/json')
         self.send_header('Content-type', self.extensions_map[type])
         self.end_headers()
@@ -57,40 +62,36 @@ class MyRequestHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/status':
             # send status as json to client
-            mesg, state = self.server.get_state(False)
+            state = json.dumps(self.server.state)
             self._set_headers('.json')
-            self.wfile.write(json.dumps(state).encode("utf-8"))
-            # if mesg == 'sync':
-            #     self._set_headers('.json')
-            #     self.wfile.write(json.dumps(state))
-            # else:
-            #     pass
+            self.wfile.write(state.encode("utf-8"))
         else:
             SimpleHTTPRequestHandler.do_GET(self)
-        state = {
-            "client": self.headers['User-Agent']
-        }
-        self.server.set_state('get: '+ self.path, state)
+
+        self.server.set_query(f'get: {self.path}',
+            client=self.headers['User-Agent'],
+        )
 
     def do_POST(self):
-        res = {}
         length = int(self.headers['Content-Length'])
         content = self.rfile.read(length)
-        print(self.headers)
-        print(content)
+
         if self.headers['Content-Type'] == 'application/json':
-            res = json.loads(content)
-            print(res)
-            if 'response' in res:
+            param = json.loads(content)
+            # print(param)
+            if 'response' in param:
                 # simulate key press
-                pyautogui.press(res['response'])
+                pyautogui.press(param['response'])
+        else:
+            param = {'content': content}
+            # print(content)
 
-        mesg, state = self.server.get_state(False)
+        state = json.dumps(self.server.state)
         self._set_headers('.json')
-        self.wfile.write(json.dumps(state).encode("utf-8"))
+        self.wfile.write(state.encode("utf-8"))
 
-        res['client'] = self.headers['User-Agent']
-        self.server.set_state('post: ' + self.path, res)
+        param['client'] = self.headers['User-Agent']
+        self.server.set_query(f'post: {self.path}', **param)
 
 
 def setupserver(addr='0.0.0.0', port=8080):
@@ -100,15 +101,15 @@ def setupserver(addr='0.0.0.0', port=8080):
 def main():
     httpd = setupserver()
     httpd.run()
+
 #    httpd.start()
 #    for ii in range(20):
-#        mesg, stat = httpd.get_state()
-#        print(stat)
+#        query, param = httpd.get_query()
 #        core.wait(0.5)
 #
 #    httpd.stop()
 
 
-
 if __name__ == '__main__':
     main()
+
