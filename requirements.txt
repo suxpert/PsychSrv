@@ -1,0 +1,8 @@
+psychopy
+threading
+numpy
+socket
+json
+http
+pyautoui
+
