@@ -76,7 +76,7 @@ def randcoh(level, ntrials, factor=None):
         cands = [l for l in adapt if len(l) == ntrials+2]
 
     choose = random.choice(cands)
-    
+
     if factor is None:
         tmp = scale[max(choose)]
         factor = np.random.randint(tmp[0],tmp[1])
@@ -105,7 +105,7 @@ def main():
     )
     win.mouseVisible = True
     # on my computer, only iohub is fully compatible with pyautoui
-    keybd = keyboard.Keyboard(backend='iohub')
+    keybd = keyboard.Keyboard()
 
     expinfo = {
         'date': data.getDateStr(),
@@ -175,6 +175,9 @@ def main():
     event.globalKeys.clear()
     event.globalKeys.add(key='escape', func=cleanup, func_kwargs={'win': win, 'httpd': httpd})
 
+    httpd.set_state(
+        state="listening",
+    )
     text_instr.setText(f'Listening at {httpd.server_addr}')
 
     # ugly waiting for connection
@@ -188,142 +191,150 @@ def main():
         if keybd.getKeys(keyList=['escape']):
             cleanup(win=win, httpd=httpd)
 
-    text_instr.setText('Connected. Waiting configuration')
-    # text_instr.draw()
-    # win.flip()
-
-    # don't know why, this one does not work
-    # keybd.waitKeys(keyList=['space', 'enter'])
-    
-    # configuration from remote
     while True:
-        win.flip()
-        core.wait(0.1)
-        query, param = httpd.get_query(True)
-        if query == 'post: /':
-            break;
-        if keybd.getKeys(keyList=['escape']):
-            cleanup(win=win, httpd=httpd)
-
-    # config = {
-    #     'signal': 'same',
-    #     'noise': 'direction',
-    #     'ndots': 300,
-    #     'size': 5,
-    #     'life': 3,
-    #     'speed': 3,
-    #     'ntrials': 8,
-    #     'duration': 2,
-    # }
-    config = param
-
-    ntrials = config['ntrials']
-    text_instr.setText(f'Will run {ntrials} trials')
-    # text_instr.draw()
-    win.flip()
-
-    core.wait(0.5)
-    text_instr.setAutoDraw(False)
-
-    # the dot stimulus have to be create after configuration
-    dots = visual.DotStim(
-        win=win,
-        name='dots',
-        signalDots=config['signal'],
-        noiseDots=config['noise'],
-        nDots=config['ndots'],
-        dotSize=config['size'],
-        speed=config['speed'],
-        dotLife=config['life'],
-        dir=0,
-        coherence=0.5,
-        fieldPos=(0, 0),
-        fieldSize=270,
-        fieldAnchor='center',
-        fieldShape='circle',
-        color='white',
-    )
-
-    # counting down
-    timer = core.Clock()
-    countdown = 3
-    for ff in range(int(countdown/dur)):
-    # while timer.getTime() < 5:
-        # text_countdown.setText=(str(5-int(timer.getTime())))
-        text_countdown.setText(str(countdown-int(ff*dur)))
-        text_countdown.draw()
+        httpd.set_state(state="waiting")
+        text_instr.setText('Waiting configuration')
+        text_instr.setAutoDraw(True)
         win.flip()
 
-    # prepare trial order and loop for trials
-    coherence = randcoh(config['coherence'], ntrials)
-    for trial in range(ntrials):
-        # the trial:
-        realdir = ['left', 'right']
-        thisdir = np.random.randint(2)
-        thiscoh = coherence[trial]
-
-        dots.dir = 180 * (1 - thisdir)
-        dots.coherence = thiscoh / 100
-
-        win.callOnFlip(keybd.clock.reset)
-        win.callOnFlip(keybd.clearEvents)
-        win.callOnFlip(timer.reset)
-        win.callOnFlip(httpd.set_state,
-            state="stim",
-            trial=trial,
-            remain=ntrials-trial-1,
-            direction=realdir[thisdir],
-            coherence=int(thiscoh),
-        )
-
-        nframes = int(config['duration']/dur)
-        for ff in range(nframes):
-            dots.draw()
-            fixation.draw()
+        # configuration from remote
+        while True:
             win.flip()
-            win.getMovieFrame()
+            core.wait(0.1)
+            query, param = httpd.get_query(True)
+            if query == 'post: /':
+                break;
+            if keybd.getKeys(keyList=['escape']):
+                cleanup(win=win, httpd=httpd)
 
-        fixation.draw()
-        t = win.flip()
+        httpd.set_state(state="config")
 
-        isi.start(0.5)
-        httpd.set_state(
-            state="isi",
-            trial=trial,
-            remain=ntrials-trial-1,
+        # config = {
+        #     'signal': 'same',
+        #     'noise': 'direction',
+        #     'ndots': 300,
+        #     'size': 5,
+        #     'life': 3,
+        #     'speed': 3,
+        #     'ntrials': 8,
+        #     'duration': 2,
+        # }
+        config = param
+
+        ntrials = config['ntrials']
+        text_instr.setText(f'Will run {ntrials} trials')
+        # text_instr.draw()
+        win.flip()
+
+        core.wait(0.5)
+        text_instr.setAutoDraw(False)
+
+        httpd.set_state(state="prepare")
+
+        # the dot stimulus have to be create after configuration
+        dots = visual.DotStim(
+            win=win,
+            name='dots',
+            signalDots=config['signal'],
+            noiseDots=config['noise'],
+            nDots=config['ndots'],
+            dotSize=config['size'],
+            speed=config['speed'],
+            dotLife=config['life'],
+            dir=0,
+            coherence=0.5,
+            fieldPos=(0, 0),
+            fieldSize=270,
+            # fieldAnchor='center',
+            fieldShape='circle',
+            color='white',
         )
 
-        savestim(win.movieFrames, f'run/trial-{trial}.npz', thiscoh, realdir[thisdir])
-        # win.saveMovieFrames(f'dots-{trial}.gif', fps=expinfo['fps'])
-        win.movieFrames = []
+        # counting down
+        timer = core.Clock()
+        countdown = 3
+        httpd.set_state(state="countdown")
+        for ff in range(int(countdown/dur)):
+        # while timer.getTime() < 5:
+            # text_countdown.setText=(str(5-int(timer.getTime())))
+            text_countdown.setText(str(countdown-int(ff*dur)))
+            text_countdown.draw()
+            win.flip()
 
-        isi.complete()
-        resp = keybd.getKeys(keyList=['left', 'right'])
-        # resp = keybd.waitKeys(0.5, keyList=['left', 'right'], clear=False)
+        # prepare trial order and loop for trials
+        coherence = randcoh(config['coherence'], ntrials)
+        for trial in range(ntrials):
+            # the trial:
+            realdir = ['left', 'right']
+            thisdir = np.random.randint(2)
+            thiscoh = coherence[trial]
 
-        if len(resp) == 0:
-            ch = ''
-            rt = np.nan
-            fb = 'miss'
-            print(f'trial {trial}: miss!', realdir[thisdir])
-        else:
-            ch = resp[-1].name
-            rt = resp[-1].rt
-            if ch == realdir[thisdir]:
-                fb = 'correct'
+            dots.dir = 180 * (1 - thisdir)
+            dots.coherence = thiscoh / 100
+
+            win.callOnFlip(keybd.clock.reset)
+            win.callOnFlip(keybd.clearEvents)
+            win.callOnFlip(timer.reset)
+            win.callOnFlip(httpd.set_state,
+                state="stim",
+                trial=trial,
+                remain=ntrials-trial-1,
+                direction=realdir[thisdir],
+                coherence=int(thiscoh),
+            )
+
+            nframes = int(config['duration']/dur)
+            for ff in range(nframes):
+                dots.draw()
+                fixation.draw()
+                win.flip()
+                win.getMovieFrame()
+
+            fixation.draw()
+            t = win.flip()
+
+            isi.start(0.5)
+            httpd.set_state(
+                state="isi",
+                trial=trial,
+                remain=ntrials-trial-1,
+            )
+
+            savestim(win.movieFrames, f'run/trial-{trial}.npz', thiscoh, realdir[thisdir])
+            # win.saveMovieFrames(f'dots-{trial}.gif', fps=expinfo['fps'])
+            win.movieFrames = []
+
+            isi.complete()
+            resp = keybd.getKeys(keyList=['left', 'right'])
+            # resp = keybd.waitKeys(0.5, keyList=['left', 'right'], clear=False)
+
+            if len(resp) == 0:
+                ch = ''
+                rt = np.nan
+                fb = 'miss'
+                print(f'trial {trial}: miss!', realdir[thisdir])
             else:
-                fb = 'error'
-            print(f'trial {trial}: {fb}', realdir[thisdir], ch, rt)
-        # keybd.clearEvents()
-        result['trial'].append(trial)
-        result['coherence'].append(thiscoh)
-        result['direction'].append(realdir[thisdir])
-        result['response'].append(ch)
-        result['rt'].append(rt)
-        result['correct'].append(fb)
+                ch = resp[-1].name
+                rt = resp[-1].rt
+                if ch == realdir[thisdir]:
+                    fb = 'correct'
+                else:
+                    fb = 'error'
+                print(f'trial {trial}: {fb}', realdir[thisdir], ch, rt)
 
-    # after all trials done: report some results
-    np.savez(f'run/{expinfo["name"]}-{expinfo["date"]}.npz', **result)
+            # keybd.clearEvents()
+            result['trial'].append(trial)
+            result['coherence'].append(thiscoh)
+            result['direction'].append(realdir[thisdir])
+            result['response'].append(ch)
+            result['rt'].append(rt)
+            result['correct'].append(fb)
+
+        # after all trials done: report some results
+        np.savez(f'run/{expinfo["name"]}-{expinfo["date"]}.npz', **result)
+        httpd.set_state(state="finished")
+        core.wait(2)
+
     cleanup(win=win, httpd=httpd)
 
 
