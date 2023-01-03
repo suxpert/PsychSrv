@@ -5,6 +5,14 @@
 *.bak
 *~
 
+# macOS garbage
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.fseventsd
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
