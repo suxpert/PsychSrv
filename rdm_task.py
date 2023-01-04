@@ -107,6 +107,7 @@ def main():
     # waiting for connection with an ugly loop
     # ps.wait_query('get', '/')
 
+    block = 0
     while ps.running:
         ps.set_state(state="waiting")
         ps.show_info(f'Waiting at {ps.server_addr}')
@@ -118,6 +119,7 @@ def main():
             if 'ntrials' in config:
                 break
         ps.set_state(state="prepare")
+        block += 1
 
         # config = {
         #     'signal': 'same',
@@ -200,7 +202,7 @@ def main():
                 remain=ntrials-trial-1,
             )
 
-            savestim(ps.win.movieFrames, f'run/trial-{trial}.npz', thiscoh, realdir[thisdir])
+            savestim(ps.win.movieFrames, f'run/block-{block}_trial-{trial}.npz', thiscoh, realdir[thisdir])
             isi.complete()
 
             resp = keybd.getKeys(keyList=['left', 'right'])
@@ -227,7 +229,7 @@ def main():
             result['correct'].append(fb)
 
         # after all trials done: report some results
-        np.savez(f'run/rdmtask-{data.getDateStr()}.npz', **result)
+        np.savez(f'run/rdmtask-{block}-{data.getDateStr()}.npz', **result)
         ps.set_state(state="finished")
         ps.sleep(2)
 
