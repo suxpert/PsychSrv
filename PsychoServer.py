@@ -184,8 +184,10 @@ class PsychoServer(HTTPServer):
     def get_state(self):
         return self.state
 
-    def wait_state(self, state, interval=0.1):
-        while True:
+    def wait_state(self, state, interval=0.1, flip=True):
+        while self.running:
+            if flip:
+                self.flip()
             if self.state['state'] == state:
                 return self.server.state
             self.sleep(interval)
@@ -207,8 +209,10 @@ class PsychoServer(HTTPServer):
             self.query = ('', {})
         return query, param
 
-    def wait_query(self, query, interval=0.1):
-        while True:
+    def wait_query(self, query, interval=0.1, flip=True):
+        while self.running:
+            if flip:
+                self.flip()
             q, param = self.get_query(True)
             if q == query:
                 return param
@@ -228,7 +232,7 @@ class PsychoServer(HTTPServer):
     def clear_cache(self):
         self.win.movieFrames = []
 
-    def show_info(self, info):
+    def show_info(self, info=None):
         if info:
             self._info.setText(info)
             self._info.setAutoDraw(True)
