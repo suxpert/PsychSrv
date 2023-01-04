@@ -4,19 +4,15 @@
 from __future__ import division
 
 import os
-import sys
 import numpy as np
 import random
 
 from psychopy import core
-from psychopy import event
 from psychopy import visual
 from psychopy import data
-# logging, clock
 
 from psychopy.hardware import keyboard
-
-from PsychoServer import setupserver
+from PsychoServer import PsychoServer
 
 
 def savestim(frames, filename, coherence=None, direction=None):
@@ -25,15 +21,6 @@ def savestim(frames, filename, coherence=None, direction=None):
         gray.append(frame.convert('L'))
     movie = np.stack(gray)
     np.savez_compressed(filename, stim=movie, coherence=coherence, direction=direction)
-
-
-def cleanup(win=None, httpd=None):
-    if httpd is not None:
-        httpd.stop()
-    if win is not None:
-        win.close()
-
-    core.quit()
 
 
 def randcoh(level, ntrials, factor=None):
@@ -85,34 +72,17 @@ def randcoh(level, ntrials, factor=None):
 
 
 def main():
-    # some initialization
-
+    # initialization
     cwd = os.path.dirname(os.path.abspath(__file__))
     os.chdir(cwd)
 
     if not os.path.isdir('run'):
         os.mkdir('run')
 
-    win = visual.Window(
-        size=(500,500),
-        fullscr=False,
-        screen=0,
-        # allowGUI=False,
-        color='black',
-        colorSpace='rgb',
-        units='pix',
-        monitor='testMonitor',
-    )
-    win.mouseVisible = True
-    # on my computer, only iohub is fully compatible with pyautoui
-    keybd = keyboard.Keyboard()
+    ps = PsychoServer(size=(500,500), port=8080, verbose=True)
+    isi = core.StaticPeriod(win=ps.win)
+    keybd = keyboard.Keyboard(backend='iohub')
 
-    expinfo = {
-        'date': data.getDateStr(),
-        'name': os.path.basename(__file__)[:-3],
-        'cwd': cwd,
-        'fps': win.getActualFrameRate(),
-    }
     result = {
         'trial': [],
         'coherence': [],
@@ -122,93 +92,24 @@ def main():
         'correct': [],
     }
 
-    print(f'Refresh rate = {expinfo["fps"]} Hz')
+    print(f'Refresh rate = {ps.fps} Hz')
     # always assume a 60Hz screen, the above fps always change
-    expinfo['fps'] = 60
     dur = 1/60
 
-    # prepare components
-    # static ISI and fixation
-    isi = core.StaticPeriod(win=win)
-    fixation = visual.ShapeStim(
-        win=win,
-        name='fixation',
-        vertices='cross',
-        size=(10, 10),
-        ori=0,
-        pos=(0, 0),
-        # anchor='center',
-        lineWidth=0,
-        lineColor=None,
-        fillColor='red',
-    )
+    ps.start()
+    ps.set_state(state="listening")
+    ps.show_info(f'Listening at {ps.server_addr}')
 
-    # instruction
-    text_instr = visual.TextStim(
-        win=win,
-        name='instr',
-        text='Preparing...',
-        font='Arial',
-        color='white',
-        pos=(0, 0),
-        height=36,
-    )
+    # waiting for connection with an ugly loop
+    ps.wait_query('get: /')
 
-    # we can reuse instruction as countdown
-    text_countdown = visual.TextStim(
-        win=win,
-        name='countdown',
-        text='',
-        font='Arial',
-        color='white',
-        pos=(0, 0),
-        height=48,
-    )
+    while ps.running:
+        ps.set_state(state="waiting")
+        ps.show_info(f'Waiting at {ps.server_addr}')
 
-    text_instr.setAutoDraw(True)
-    win.flip()
-
-    # setup server and wait for connection
-    httpd = setupserver()
-    httpd.start()
-
-    event.globalKeys.clear()
-    event.globalKeys.add(key='escape', func=cleanup, func_kwargs={'win': win, 'httpd': httpd})
-
-    httpd.set_state(
-        state="listening",
-    )
-    text_instr.setText(f'Listening at {httpd.server_addr}')
-
-    # ugly waiting for connection
-    while True:
-        win.flip()
-        core.wait(0.1)
-        query, param = httpd.get_query(True)
-        if query == 'get: /':
-            # some one is requesting the home page
-            break;
-        if keybd.getKeys(keyList=['escape']):
-            cleanup(win=win, httpd=httpd)
-
-    while True:
-        httpd.set_state(state="waiting")
-        text_instr.setText('Waiting configuration')
-        text_instr.setAutoDraw(True)
-        win.flip()
-
-        # configuration from remote
-        while True:
-            win.flip()
-            core.wait(0.1)
-            query, param = httpd.get_query(True)
-            if query == 'post: /':
-                break;
-            if keybd.getKeys(keyList=['escape']):
-                cleanup(win=win, httpd=httpd)
-
-        httpd.set_state(state="config")
-
+        # waiting for configuration with an ugly loop
+        config = ps.wait_query('post: /')
+        ps.set_state(state="prepare")
         # config = {
         #     'signal': 'same',
         #     'noise': 'direction',
@@ -219,21 +120,16 @@ def main():
         #     'ntrials': 8,
         #     'duration': 2,
         # }
-        config = param
 
         ntrials = config['ntrials']
-        text_instr.setText(f'Will run {ntrials} trials')
-        # text_instr.draw()
-        win.flip()
 
-        core.wait(0.5)
-        text_instr.setAutoDraw(False)
-
-        httpd.set_state(state="prepare")
+        ps.show_info(f'Will run {ntrials} trials')
+        ps.flip()
+        ps.sleep(0.5)
 
         # the dot stimulus have to be create after configuration
         dots = visual.DotStim(
-            win=win,
+            win=ps.win,
             name='dots',
             signalDots=config['signal'],
             noiseDots=config['noise'],
@@ -251,15 +147,16 @@ def main():
         )
 
         # counting down
+        ps.set_state(state="countdown")
         timer = core.Clock()
         countdown = 3
-        httpd.set_state(state="countdown")
         for ff in range(int(countdown/dur)):
         # while timer.getTime() < 5:
             # text_countdown.setText=(str(5-int(timer.getTime())))
-            text_countdown.setText(str(countdown-int(ff*dur)))
-            text_countdown.draw()
-            win.flip()
+            ps.show_info(str(countdown-int(ff*dur)))
+            ps.flip()
+
+        ps.show_info()
 
         # prepare trial order and loop for trials
         coherence = randcoh(config['coherence'], ntrials)
@@ -272,10 +169,10 @@ def main():
             dots.dir = 180 * (1 - thisdir)
             dots.coherence = thiscoh / 100
 
-            win.callOnFlip(keybd.clock.reset)
-            win.callOnFlip(keybd.clearEvents)
-            win.callOnFlip(timer.reset)
-            win.callOnFlip(httpd.set_state,
+            ps.win.callOnFlip(keybd.clock.reset)
+            ps.win.callOnFlip(keybd.clearEvents)
+            ps.win.callOnFlip(timer.reset)
+            ps.win.callOnFlip(ps.set_state,
                 state="stim",
                 trial=trial,
                 remain=ntrials-trial-1,
@@ -286,27 +183,24 @@ def main():
             nframes = int(config['duration']/dur)
             for ff in range(nframes):
                 dots.draw()
-                fixation.draw()
-                win.flip()
-                win.getMovieFrame()
+                ps.show_fixation()
+                ps.flip(True)
 
-            fixation.draw()
-            t = win.flip()
+            ps.show_fixation()
+            ps.flip(True)
 
             isi.start(0.5)
-            httpd.set_state(
+            ps.set_state(
                 state="isi",
                 trial=trial,
                 remain=ntrials-trial-1,
             )
 
-            savestim(win.movieFrames, f'run/trial-{trial}.npz', thiscoh, realdir[thisdir])
-            # win.saveMovieFrames(f'dots-{trial}.gif', fps=expinfo['fps'])
-            win.movieFrames = []
-
+            savestim(ps.win.movieFrames, f'run/trial-{trial}.npz', thiscoh, realdir[thisdir])
+            ps.clear_cache()
             isi.complete()
+
             resp = keybd.getKeys(keyList=['left', 'right'])
-            # resp = keybd.waitKeys(0.5, keyList=['left', 'right'], clear=False)
 
             if len(resp) == 0:
                 ch = ''
@@ -331,11 +225,9 @@ def main():
             result['correct'].append(fb)
 
         # after all trials done: report some results
-        np.savez(f'run/{expinfo["name"]}-{expinfo["date"]}.npz', **result)
-        httpd.set_state(state="finished")
-        core.wait(2)
-
-    cleanup(win=win, httpd=httpd)
+        np.savez(f'run/rdmtask-{data.getDateStr()}.npz', **result)
+        ps.set_state(state="finished")
+        ps.sleep(2)
 
 
 if __name__ == '__main__':
