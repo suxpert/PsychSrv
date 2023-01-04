@@ -72,6 +72,10 @@ def randcoh(level, ntrials, factor=None):
 
 
 def main():
+    # configuration
+    countdown = 2
+    dur_isi = 1
+
     # initialization
     cwd = os.path.dirname(os.path.abspath(__file__))
     os.chdir(cwd)
@@ -97,19 +101,24 @@ def main():
     dur = 1/60
 
     ps.start()
-    ps.set_state(state="listening")
-    ps.show_info(f'Listening at {ps.server_addr}')
+    # ps.set_state(state="listening")
+    # ps.show_info(f'Listening at {ps.server_addr}')
 
     # waiting for connection with an ugly loop
-    ps.wait_query('get: /')
+    # ps.wait_query('get', '/')
 
     while ps.running:
         ps.set_state(state="waiting")
         ps.show_info(f'Waiting at {ps.server_addr}')
 
         # waiting for configuration with an ugly loop
-        config = ps.wait_query('post: /')
+        ps.clear_cache(clear_posts=True)
+        while ps.running:
+            config = ps.wait_query('post', '/')
+            if 'ntrials' in config:
+                break
         ps.set_state(state="prepare")
+
         # config = {
         #     'signal': 'same',
         #     'noise': 'direction',
@@ -122,10 +131,6 @@ def main():
         # }
 
         ntrials = config['ntrials']
-
-        ps.show_info(f'Will run {ntrials} trials')
-        ps.flip()
-        ps.sleep(0.5)
 
         # the dot stimulus have to be create after configuration
         dots = visual.DotStim(
@@ -147,15 +152,13 @@ def main():
         )
 
         # counting down
-        ps.set_state(state="countdown")
+        # ps.set_state(state="countdown")
         timer = core.Clock()
-        countdown = 3
         for ff in range(int(countdown/dur)):
         # while timer.getTime() < 5:
             # text_countdown.setText=(str(5-int(timer.getTime())))
-            ps.show_info(str(countdown-int(ff*dur)))
+            ps.show_info(f'{ntrials} trials for this block\n{countdown-int(ff*dur)}')
             ps.flip()
-
         ps.show_info()
 
         # prepare trial order and loop for trials
@@ -169,6 +172,7 @@ def main():
             dots.dir = 180 * (1 - thisdir)
             dots.coherence = thiscoh / 100
 
+            ps.clear_cache()
             ps.win.callOnFlip(keybd.clock.reset)
             ps.win.callOnFlip(keybd.clearEvents)
             ps.win.callOnFlip(timer.reset)
@@ -189,7 +193,7 @@ def main():
             ps.show_fixation()
             ps.flip(True)
 
-            isi.start(0.5)
+            isi.start(dur_isi)
             ps.set_state(
                 state="isi",
                 trial=trial,
@@ -197,7 +201,6 @@ def main():
             )
 
             savestim(ps.win.movieFrames, f'run/trial-{trial}.npz', thiscoh, realdir[thisdir])
-            ps.clear_cache()
             isi.complete()
 
             resp = keybd.getKeys(keyList=['left', 'right'])
@@ -216,7 +219,6 @@ def main():
                     fb = 'error'
                 print(f'trial {trial}: {fb}', realdir[thisdir], ch, rt)
 
-            # keybd.clearEvents()
             result['trial'].append(trial)
             result['coherence'].append(thiscoh)
             result['direction'].append(realdir[thisdir])

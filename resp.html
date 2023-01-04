@@ -69,7 +69,7 @@ async function choose(which)
     data = {
         'response': which,
     }
-    let response = await fetch('/', {
+    let response = await fetch('/resp', {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
@@ -83,7 +83,9 @@ async function choose(which)
     var returned = await response.json()
     // console.log(returned)
     if ( returned.remain == 0) {
-        location.href = "/"
+        setTimeout(function(){
+            location.href = "/"
+        }, 3000)
     }
 }
     </script>

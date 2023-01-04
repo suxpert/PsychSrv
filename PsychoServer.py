@@ -7,7 +7,8 @@ import socket
 import json
 import pyautogui
 import threading
-# import time
+import requests
+import time
 import io
 
 from http.server import SimpleHTTPRequestHandler, HTTPServer
@@ -32,14 +33,14 @@ class PsychoRequestHandler(SimpleHTTPRequestHandler):
             state = json.dumps(self.server.state)
             self._set_headers('.json')
             self.wfile.write(state.encode("utf-8"))
-        elif self.path == '/get_delay':
+        elif self.path == '/delay':
             nframes = len(self.server.win.movieFrames)
             self._set_headers('.html')
             self.wfile.write(f'{nframes}'.encode("utf-8"))
-        elif self.path == '/get_frame' or self.path == '/get_gray':
+        elif self.path == '/frame' or self.path == '/image':
             # return a png image
             frame = self.server.get_frame()
-            if self == '/get_gray':
+            if self == '/image':
                 frame = frame.convert('L')
             if frame is not None:
                 with io.BytesIO() as buff:
@@ -52,7 +53,7 @@ class PsychoRequestHandler(SimpleHTTPRequestHandler):
         else:
             SimpleHTTPRequestHandler.do_GET(self)
 
-        self.server.set_query(f'get: {self.path}',
+        self.server.set_query('get', self.path,
             client=self.headers['User-Agent'],
         )
 
@@ -75,7 +76,7 @@ class PsychoRequestHandler(SimpleHTTPRequestHandler):
         self.wfile.write(state.encode("utf-8"))
 
         param['client'] = self.headers['User-Agent']
-        self.server.set_query(f'post: {self.path}', **param)
+        self.server.set_query('post', self.path, **param)
 
 
 class PsychoServer(HTTPServer):
@@ -84,7 +85,8 @@ class PsychoServer(HTTPServer):
         self.server_addr = '%s:%d' % (socket.gethostbyname(self.server_name), self.server_port)
         self.server_thread = threading.Thread(target=self.serve_forever)
         self.state = {'state': 'init'}
-        self.query = ('', {})
+        self.query = ('', '', {})
+        self.posts = []
         self.verbose = verbose
         self.running = True
 
@@ -100,6 +102,8 @@ class PsychoServer(HTTPServer):
             winType='pyglet',
         )
         self.win.mouseVisible = True
+        self.fps = self.win.getActualFrameRate()
+        self.timer = core.Clock()
 
         # make the window top-most
         _user32.SetWindowPos(
@@ -107,9 +111,6 @@ class PsychoServer(HTTPServer):
             constants.HWND_TOPMOST, 0, 0, 0, 0,
             constants.SWP_NOMOVE | constants.SWP_NOSIZE | constants.SWP_SHOWWINDOW
         )
-
-        self.fps = self.win.getActualFrameRate()
-        self.timer = core.Clock()
 
         self._info = visual.TextStim(
             win=self.win,
@@ -164,9 +165,9 @@ class PsychoServer(HTTPServer):
     def run(self):
         self.start()
         while self.running:
-            q, _ = self.get_query(True)
+            q, p, _ = self.get_query(True)
             if q:
-                self.show_info(q)
+                self.show_info(f'{q}: {p}')
                 self.flip(True)
             self.sleep(0.1)
 
@@ -186,37 +187,46 @@ class PsychoServer(HTTPServer):
 
     def wait_state(self, state, interval=0.1, flip=True):
         while self.running:
+            if 'state' in self.state and self.state['state'] == state:
+                return self.server.state
             if flip:
                 self.flip()
-            if self.state['state'] == state:
-                return self.server.state
-            self.sleep(interval)
+            else:
+                self.sleep(interval)
 
-    def set_query(self, query='', **kwargs):
+    def set_query(self, query='', path='', **kwargs):
         '''
         set request infomation, to be used in request callback
         '''
         if self.verbose and kwargs:
-            print(f"query = '{query}', ", kwargs)
-        self.query = (query, kwargs)
+            print(f"{query}: {path}, ", kwargs)
+        self.query = (query, path, kwargs)
+        if query == 'post':
+            self.posts.append((path, kwargs))
 
     def get_query(self, clear=False):
         '''
         get the last request info
         '''
-        query, param = self.query
+        query, path, param = self.query
         if clear:
-            self.query = ('', {})
-        return query, param
+            self.query = ('', '', {})
+        return query, path, param
 
-    def wait_query(self, query, interval=0.1, flip=True):
+    def wait_query(self, query, path='', interval=0.1, flip=True):
         while self.running:
+            if query == 'post':
+                # posts are stored separately:
+                if len(self.posts) > 0 and (not path or self.posts[-1][0] == path):
+                    return self.posts[-1][1]
+            else:
+                q, p, param = self.get_query(True)
+                if q == query and (not path or p == path):
+                    return param
             if flip:
                 self.flip()
-            q, param = self.get_query(True)
-            if q == query:
-                return param
-            self.sleep(interval)
+            else:
+                self.sleep(interval)
 
     def flip(self, cache=False):
         self.win.flip()
@@ -224,13 +234,16 @@ class PsychoServer(HTTPServer):
             self.win.getMovieFrame()
 
     def get_frame(self):
-        if len(self.win.movieFrames) > 0:
+        nframes = len(self.win.movieFrames)
+        if nframes > 0:
             return self.win.movieFrames.pop(0)
         else:
             return None
 
-    def clear_cache(self):
+    def clear_cache(self, clear_posts=False):
         self.win.movieFrames = []
+        if clear_posts:
+            self.posts = []
 
     def show_info(self, info=None):
         if info:
@@ -241,6 +254,38 @@ class PsychoServer(HTTPServer):
 
     def show_fixation(self):
         self._fixation.draw()
+
+
+def get_remote_state(url, timeout=0.2):
+    try:
+        req = requests.get(url, timeout=timeout)
+        if req.ok and req.headers['Content-type'] == 'application/json':
+            state = req.json()
+        else:
+            state = {
+                'code': req.status_code,
+                'content': req.content,
+            }
+    except Exception as e:
+        state = str(e)
+
+    return state
+
+def wait_remote_state(url, state, interval=0.2, timeout=0.2):
+    while True:
+        try:
+            req = requests.get(url, timeout=timeout)
+            print(req.content)
+            if req.ok and req.headers['Content-type'] == 'application/json':
+                ret = req.json()
+                # print(ret)
+                if 'state' in ret and ret['state'] == state:
+                    return ret
+        # except requests.ConnectionError as e:
+        except Exception as e:
+            print(e)
+            pass
+        time.sleep(interval)
 
 
 def main():
