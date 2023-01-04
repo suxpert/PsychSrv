@@ -7,7 +7,7 @@ import socket
 import json
 import pyautogui
 import threading
-import time
+# import time
 import io
 
 from http.server import SimpleHTTPRequestHandler, HTTPServer
@@ -16,6 +16,7 @@ from psychopy import core
 from psychopy import event
 from psychopy import visual
 
+from pyglet.libs.win32 import _user32, constants
 # from psychopy.hardware import keyboard
 
 
@@ -31,6 +32,10 @@ class PsychoRequestHandler(SimpleHTTPRequestHandler):
             state = json.dumps(self.server.state)
             self._set_headers('.json')
             self.wfile.write(state.encode("utf-8"))
+        elif self.path == '/get_delay':
+            nframes = len(self.server.win.movieFrames)
+            self._set_headers('.html')
+            self.wfile.write(f'{nframes}'.encode("utf-8"))
         elif self.path == '/get_frame' or self.path == '/get_gray':
             # return a png image
             frame = self.server.get_frame()
@@ -81,6 +86,7 @@ class PsychoServer(HTTPServer):
         self.state = {'state': 'init'}
         self.query = ('', {})
         self.verbose = verbose
+        self.running = True
 
         self.win = visual.Window(
             size=size,
@@ -91,8 +97,16 @@ class PsychoServer(HTTPServer):
             colorSpace='rgb',
             units='pix',
             monitor='testMonitor',
+            winType='pyglet',
         )
         self.win.mouseVisible = True
+
+        # make the window top-most
+        _user32.SetWindowPos(
+            self.win.winHandle._hwnd,
+            constants.HWND_TOPMOST, 0, 0, 0, 0,
+            constants.SWP_NOMOVE | constants.SWP_NOSIZE | constants.SWP_SHOWWINDOW
+        )
 
         self.fps = self.win.getActualFrameRate()
         self.timer = core.Clock()
@@ -120,6 +134,7 @@ class PsychoServer(HTTPServer):
 
         event.globalKeys.clear()
         event.globalKeys.add(key='escape', func=self.__del__)
+        event.globalKeys.add(key='q', modifiers=['ctrl'], func=self.__del__)
 
         self.show_info('Initializing')
         self.flip()
@@ -128,29 +143,35 @@ class PsychoServer(HTTPServer):
         '''
         async serve forever in background
         '''
+        self.running = True
         self.server_thread.start()
 
     def stop(self):
         '''
         stop the serve forever thread
         '''
+        self.running = False
         self.shutdown()
         self.server_thread.join()
 
     def __del__(self):
         self.stop()
         self.win.close()
-        core.quit()
+        # exit might cause a wait forever on windows:
+        # exception ignored on calling ctypes callback function
+        # core.quit()
 
     def run(self):
         self.start()
-        while True:
-            q, p = self.get_query()
+        while self.running:
+            q, _ = self.get_query(True)
             if q:
                 self.show_info(q)
                 self.flip(True)
-            # self.win.winHandle.activate()
-            time.sleep(0.1)
+            self.sleep(0.1)
+
+    def sleep(self, interval):
+        core.wait(interval, hogCPUperiod=0.05)
 
     def set_state(self, **kwargs):
         '''
@@ -167,7 +188,7 @@ class PsychoServer(HTTPServer):
         while True:
             if self.state['state'] == state:
                 return self.server.state
-            time.sleep(interval)
+            self.sleep(interval)
 
     def set_query(self, query='', **kwargs):
         '''
@@ -191,7 +212,7 @@ class PsychoServer(HTTPServer):
             q, param = self.get_query(True)
             if q == query:
                 return param
-            time.sleep(interval)
+            self.sleep(interval)
 
     def flip(self, cache=False):
         self.win.flip()
@@ -225,4 +246,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
