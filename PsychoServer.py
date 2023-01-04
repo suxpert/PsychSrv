@@ -10,6 +10,7 @@ import threading
 import requests
 import time
 import io
+import sys
 
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 
@@ -17,7 +18,8 @@ from psychopy import core
 from psychopy import event
 from psychopy import visual
 
-from pyglet.libs.win32 import _user32, constants
+if sys.platform == 'win32':
+    from pyglet.libs.win32 import _user32, constants
 # from psychopy.hardware import keyboard
 
 
@@ -106,11 +108,12 @@ class PsychoServer(HTTPServer):
         self.timer = core.Clock()
 
         # make the window top-most
-        _user32.SetWindowPos(
-            self.win.winHandle._hwnd,
-            constants.HWND_TOPMOST, 0, 0, 0, 0,
-            constants.SWP_NOMOVE | constants.SWP_NOSIZE | constants.SWP_SHOWWINDOW
-        )
+        if sys.platform == 'win32':
+            _user32.SetWindowPos(
+                self.win.winHandle._hwnd,
+                constants.HWND_TOPMOST, 0, 0, 0, 0,
+                constants.SWP_NOMOVE | constants.SWP_NOSIZE | constants.SWP_SHOWWINDOW
+            )
 
         self._info = visual.TextStim(
             win=self.win,
@@ -251,6 +254,7 @@ class PsychoServer(HTTPServer):
             self._info.setAutoDraw(True)
         else:
             self._info.setAutoDraw(False)
+        self.win.winHandle.activate()
 
     def show_fixation(self):
         self._fixation.draw()

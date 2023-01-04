@@ -75,6 +75,7 @@ def main():
     # configuration
     countdown = 2
     dur_isi = 1
+    dur_blk = 2
 
     # initialization
     cwd = os.path.dirname(os.path.abspath(__file__))
@@ -155,11 +156,11 @@ def main():
 
         # counting down
         # ps.set_state(state="countdown")
-        timer = core.Clock()
+        # timer = core.Clock()
         for ff in range(int(countdown/dur)):
         # while timer.getTime() < 5:
             # text_countdown.setText=(str(5-int(timer.getTime())))
-            ps.show_info(f'{ntrials} trials for this block\n{countdown-int(ff*dur)}')
+            ps.show_info(f'{ntrials} trials for block {block}\nin {countdown-int(ff*dur)}')
             ps.flip()
         ps.show_info()
 
@@ -177,7 +178,7 @@ def main():
             ps.clear_cache()
             ps.win.callOnFlip(keybd.clock.reset)
             ps.win.callOnFlip(keybd.clearEvents)
-            ps.win.callOnFlip(timer.reset)
+            # ps.win.callOnFlip(timer.reset)
             ps.win.callOnFlip(ps.set_state,
                 state="stim",
                 trial=trial,
@@ -231,7 +232,7 @@ def main():
         # after all trials done: report some results
         np.savez(f'run/rdmtask-{block}-{data.getDateStr()}.npz', **result)
         ps.set_state(state="finished")
-        ps.sleep(2)
+        ps.sleep(dur_blk)
 
 
 if __name__ == '__main__':
