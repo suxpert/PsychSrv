@@ -5,7 +5,6 @@ from __future__ import division
 
 import socket
 import json
-# import pyautogui
 import threading
 import io
 import sys
@@ -18,7 +17,6 @@ from psychopy import visual
 
 if sys.platform == 'win32':
     from pyglet.libs.win32 import _user32, constants
-# from psychopy.hardware import keyboard
 
 
 class PsychoRequestHandler(SimpleHTTPRequestHandler):
@@ -65,9 +63,6 @@ class PsychoRequestHandler(SimpleHTTPRequestHandler):
         if self.headers['Content-Type'] == 'application/json':
             param = json.loads(content)
             # print(param)
-            # if 'response' in param:
-                # simulate key press
-                # pyautogui.press(param['response'])
         else:
             param = {'content': content}
             # print(content)
@@ -106,14 +101,7 @@ class PsychoServer(HTTPServer):
         self.win.mouseVisible = True
         self.fps = self.win.getActualFrameRate()
         self.timer = core.Clock()
-
-        # make the window top-most
-        if sys.platform == 'win32':
-            _user32.SetWindowPos(
-                self.win.winHandle._hwnd,
-                constants.HWND_TOPMOST, 0, 0, 0, 0,
-                constants.SWP_NOMOVE | constants.SWP_NOSIZE | constants.SWP_SHOWWINDOW
-            )
+        self.visible(True)
 
         self._info = visual.TextStim(
             win=self.win,
@@ -130,7 +118,6 @@ class PsychoServer(HTTPServer):
             size=(10, 10),
             ori=0,
             pos=(0, 0),
-            # anchor='center',
             lineWidth=0,
             lineColor=None,
             fillColor='red',
@@ -183,7 +170,30 @@ class PsychoServer(HTTPServer):
 
     def move(self, dx=0, dy=0):
         x, y = self.win.winHandle.get_location()
-        self.win.winHandle.set_location(x+dx, y+dy)
+        if dx != 0 or dy != 0:
+            self.win.winHandle.set_location(x+dx, y+dy)
+        return x+dx, y+dy
+
+    def move_to(self, x, y):
+        self.win.winHandle.set_location(x, y)
+
+    def visible(self, visible=True):
+        # make the window top-most on windows
+        if sys.platform == 'win32':
+            if visible:
+                flag = constants.HWND_TOPMOST
+            else:
+                flag = constants.HWND_BOTTOM
+            _user32.SetWindowPos(
+                self.win.winHandle._hwnd, flag, 0, 0, 0, 0,
+                constants.SWP_NOMOVE | constants.SWP_NOSIZE | constants.SWP_SHOWWINDOW
+            )
+        else:
+            # TODO: visible don't work on windows?
+            # don't know how to set topmost on other platform
+            self.win.winHandle.set_visible(visible)
+            if top:
+                self.win.winHandle.activate()
 
     def set_state(self, **kwargs):
         '''
@@ -239,7 +249,6 @@ class PsychoServer(HTTPServer):
             return '', {}
         return path, param
 
-
     def wait_query(self, query, path='', interval=0.1, flip=True):
         while self.running:
             if query == 'post':
@@ -255,10 +264,12 @@ class PsychoServer(HTTPServer):
             else:
                 self.sleep(interval)
 
-    def flip(self, cache=False):
+    def flip(self, cache=False, front=True):
         self.win.flip()
         if cache:
             self.win.getMovieFrame()
+        if front:
+            self.win.winHandle.activate()
 
     def get_frame(self):
         nframes = len(self.win.movieFrames)
@@ -282,7 +293,6 @@ class PsychoServer(HTTPServer):
             self._info.setAutoDraw(True)
         else:
             self._info.setAutoDraw(False)
-        self.win.winHandle.activate()
 
     def show_fixation(self):
         self._fixation.draw()
@@ -290,7 +300,7 @@ class PsychoServer(HTTPServer):
 
 def main():
     ps = PsychoServer(size=(500,500), port=8080)
-    ps.move(0, -50)
+    ps.move(200, -100)
     ps.run()
 
 
