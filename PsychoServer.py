@@ -5,7 +5,7 @@ from __future__ import division
 
 import socket
 import json
-import pyautogui
+# import pyautogui
 import threading
 import io
 import sys
@@ -58,15 +58,16 @@ class PsychoRequestHandler(SimpleHTTPRequestHandler):
         )
 
     def do_POST(self):
+        t = self.server.timer.getTime()
         length = int(self.headers['Content-Length'])
         content = self.rfile.read(length)
 
         if self.headers['Content-Type'] == 'application/json':
             param = json.loads(content)
             # print(param)
-            if 'response' in param:
+            # if 'response' in param:
                 # simulate key press
-                pyautogui.press(param['response'])
+                # pyautogui.press(param['response'])
         else:
             param = {'content': content}
             # print(content)
@@ -75,6 +76,7 @@ class PsychoRequestHandler(SimpleHTTPRequestHandler):
         self._set_headers('.json')
         self.wfile.write(state.encode("utf-8"))
 
+        param['time'] = t
         param['client'] = self.headers['User-Agent']
         self.server.set_query('post', self.path, **param)
 
@@ -161,7 +163,8 @@ class PsychoServer(HTTPServer):
         self.win.close()
         # exit might cause a wait forever on windows:
         # exception ignored on calling ctypes callback function
-        # core.quit()
+        if sys.platform != 'win32':
+            core.quit()
 
     def run(self):
         self.start()
@@ -221,6 +224,22 @@ class PsychoServer(HTTPServer):
             self.query = ('', '', {})
         return query, path, param
 
+    def get_post(self, clear=None):
+        '''
+        get the last post info
+        '''
+        if len(self.posts) > 0:
+            if clear == 'last':
+                path, param = self.posts.pop()
+            else:
+                path, param = self.posts[-1]
+            if clear == 'all':
+                self.posts = []
+        else:
+            return '', {}
+        return path, param
+
+
     def wait_query(self, query, path='', interval=0.1, flip=True):
         while self.running:
             if query == 'post':
@@ -247,6 +266,10 @@ class PsychoServer(HTTPServer):
             return self.win.movieFrames.pop(0)
         else:
             return None
+
+    def sync_frame(self, interval=0.1):
+        while self.win.movieFrames:
+            self.sleep(interval)
 
     def clear_cache(self, clear_posts=False):
         self.win.movieFrames = []
