@@ -73,9 +73,9 @@ def randcoh(level, ntrials, factor=None):
 
 def main():
     # configuration
-    countdown = 2
+    countdown = 3
     dur_isi = 1
-    dur_blk = 2
+    blk_iti = 2
 
     # initialization
     cwd = os.path.dirname(os.path.abspath(__file__))
@@ -84,7 +84,8 @@ def main():
     if not os.path.isdir('run'):
         os.mkdir('run')
 
-    ps = PsychoServer(size=(500,500), port=8080, verbose=True)
+    ps = PsychoServer(size=(300,300), port=8080, verbose=True)
+    ps.move(0, -50)
     isi = core.StaticPeriod(win=ps.win)
     keybd = keyboard.Keyboard(backend='iohub')
 
@@ -111,7 +112,7 @@ def main():
     block = 0
     while ps.running:
         ps.set_state(state="waiting")
-        ps.show_info(f'Waiting at {ps.server_addr}')
+        ps.show_info(f'Waiting at\n{ps.server_addr}')
 
         # waiting for configuration with an ugly loop
         ps.clear_cache(clear_posts=True)
@@ -155,11 +156,7 @@ def main():
         )
 
         # counting down
-        # ps.set_state(state="countdown")
-        # timer = core.Clock()
         for ff in range(int(countdown/dur)):
-        # while timer.getTime() < 5:
-            # text_countdown.setText=(str(5-int(timer.getTime())))
             ps.show_info(f'{ntrials} trials for block {block}\nin {countdown-int(ff*dur)}')
             ps.flip()
         ps.show_info()
@@ -181,6 +178,7 @@ def main():
             # ps.win.callOnFlip(timer.reset)
             ps.win.callOnFlip(ps.set_state,
                 state="stim",
+                block=block,
                 trial=trial,
                 remain=ntrials-trial-1,
                 direction=realdir[thisdir],
@@ -193,19 +191,24 @@ def main():
                 ps.show_fixation()
                 ps.flip(True)
 
+            # save an extra blank screen for separation in frame streams
             ps.show_fixation()
             ps.flip(True)
 
             isi.start(dur_isi)
+            savestim(ps.win.movieFrames, f'run/block-{block}_trial-{trial}.npz', thiscoh, realdir[thisdir])
+            # set status after stimulus saved, so that client can wait for isi as an event
             ps.set_state(
                 state="isi",
+                block=block,
                 trial=trial,
                 remain=ntrials-trial-1,
             )
+            # or wait until all frames have been fetched
+            # ps.sync_frame()
 
-            savestim(ps.win.movieFrames, f'run/block-{block}_trial-{trial}.npz', thiscoh, realdir[thisdir])
             isi.complete()
-
+            # check for simulated key press
             resp = keybd.getKeys(keyList=['left', 'right'])
 
             if len(resp) == 0:
@@ -232,7 +235,7 @@ def main():
         # after all trials done: report some results
         np.savez(f'run/rdmtask-{block}-{data.getDateStr()}.npz', **result)
         ps.set_state(state="finished")
-        ps.sleep(dur_blk)
+        ps.sleep(blk_iti)
 
 
 if __name__ == '__main__':
