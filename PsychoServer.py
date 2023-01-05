@@ -178,6 +178,10 @@ class PsychoServer(HTTPServer):
     def sleep(self, interval):
         core.wait(interval, hogCPUperiod=0.05)
 
+    def move(self, dx=0, dy=0):
+        x, y = self.win.winHandle.get_location()
+        self.win.winHandle.set_location(x+dx, y+dy)
+
     def set_state(self, **kwargs):
         '''
         set server state, which can be fetched using http get
@@ -263,6 +267,7 @@ class PsychoServer(HTTPServer):
 
 def main():
     ps = PsychoServer(size=(500,500), port=8080)
+    ps.move(0, -50)
     ps.run()
 
 
