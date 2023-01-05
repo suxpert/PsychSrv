@@ -165,11 +165,14 @@ class PsychoServer(HTTPServer):
 
     def run(self):
         self.start()
+        lastquery = None
         while self.running:
             q, p, _ = self.get_query(True)
             if q:
-                self.show_info(f'{q}: {p}')
-                self.flip(True)
+                query = f'{q}: {p}'
+                self.show_info(query)
+                self.flip(query != lastquery)
+                lastquery = query
             self.sleep(0.1)
 
     def sleep(self, interval):

@@ -92,11 +92,14 @@ class PsychoClient():
 
 def main():
     client = PsychoClient('127.0.0.1', 8080)
+    client.wait_state('init')
     while True:
         state = client.get_state()
         print(state)
+        if isinstance(state, str):
+            # should be some exception, e.g. server is down, so
+            break
         time.sleep(2)
-    pass
 
 
 if __name__ == '__main__':
