@@ -52,7 +52,7 @@ def main():
     cfgfile = os.path.join(folder, '_meta.txt')
     if os.path.exists(cfgfile):
         raise FileExistsError('Config file exist! dataset is not empty!')
-    
+
     with open(cfgfile, 'w') as file:
         yaml.dump(config, file)
 
@@ -89,7 +89,7 @@ def main():
     win.flip()
 
     keybd.waitKeys(keyList=['space', 'enter'])
-    
+
     # for c in [60, 50, 40, 30, 20, 10]:
     for c in config['coherence']:
         for d in config['direction']:
@@ -99,7 +99,7 @@ def main():
                 a = 0
 
             for r in range(config['repeat']):
-            
+
                 text_instr.setText(f'c{c}{d[0]}-{r}')
                 text_instr.draw()
                 win.flip()

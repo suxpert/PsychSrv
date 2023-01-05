@@ -63,7 +63,7 @@ def main():
     win.flip()
 
     keybd.waitKeys(keyList=['space', 'enter'])
-    
+
     opt_signal = ['same', 'different']
     opt_noise  = ['position', 'direction', 'walk']
     opt_dir    = [0, 90, 180, 270]

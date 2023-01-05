@@ -40,9 +40,9 @@ class PsychoRequestHandler(SimpleHTTPRequestHandler):
         elif self.path == '/frame' or self.path == '/image':
             # return a png image
             frame = self.server.get_frame()
-            if self == '/image':
-                frame = frame.convert('L')
             if frame is not None:
+                if self.path == '/image':
+                    frame = frame.convert('L')
                 with io.BytesIO() as buff:
                     frame.save(buff, format='png')
                     self._set_headers('.png')
