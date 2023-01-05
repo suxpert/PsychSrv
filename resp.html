@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-cmn-Hans">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
@@ -7,7 +8,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="screen-orientation" content="landscape">
     <meta name="full-screen" content="yes">
-    <!--link rel="icon" href="rdm.gif" type="image/gif" /-->
     <title>请作答</title>
 
     <style type="text/css">
@@ -37,28 +37,35 @@ div.container {
     background-color: black;
     cursor: pointer;
 }
+
 div.container > div {
     height: 20vh;
     width: 10vw;
     background-color: gray;
 }
+
 div.container:hover > div {
     background-color: darkgray;
 }
+
 div.container:active > div {
     background-color: lightgray;
 }
+
 div.left {
     float: left;
     border-radius: 5vh 0 0 5vh;
 }
+
 div.right {
     float: right;
     border-radius: 0 5vh 5vh 0;
 }
+
 div#left {
     clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
 }
+
 div#right {
     clip-path: polygon(0% 0%, 0% 100%, 100% 50%);
 }
@@ -74,10 +81,11 @@ async function refresh()
     }
     var returned = await response.json()
     // if ( returned.remain == 0 && returned.state == 'isi') {
-    if ( returned.state == 'finished') {
+    if (returned.state == 'finished') {
         location.href = "/"
     }
 }
+
 async function choose(which)
 {
     data = {
@@ -94,6 +102,7 @@ async function choose(which)
 }
     </script>
 </head>
+
 <body onload="setInterval(refresh, 1000)">
     <div class="container left" onmousedown="choose('left')">
     <!--div class="container left" ontouchstart="choose('left')"-->
@@ -105,4 +114,5 @@ async function choose(which)
     </div>
     <!-- <footer>Copyright (C) 2022  LiTuX, all wrongs reserved.</footer> -->
 </body>
+
 </html>
