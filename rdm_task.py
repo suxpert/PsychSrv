@@ -87,7 +87,7 @@ def main():
     ps = PsychoServer(size=(300,300), port=8080, verbose=True)
     ps.move(0, -50)
     isi = core.StaticPeriod(win=ps.win)
-    keybd = keyboard.Keyboard(backend='iohub')
+    # keybd = keyboard.Keyboard(backend='iohub')
 
     result = {
         'trial': [],
@@ -113,6 +113,7 @@ def main():
     while ps.running:
         ps.set_state(state="waiting")
         ps.show_info(f'Waiting at\n{ps.server_addr}')
+        ps.timer.reset()
 
         # waiting for configuration with an ugly loop
         ps.clear_cache(clear_posts=True)
@@ -172,10 +173,11 @@ def main():
             dots.dir = 180 * (1 - thisdir)
             dots.coherence = thiscoh / 100
 
-            ps.clear_cache()
-            ps.win.callOnFlip(keybd.clock.reset)
-            ps.win.callOnFlip(keybd.clearEvents)
-            # ps.win.callOnFlip(timer.reset)
+            # ps.clear_cache()
+            ps.clear_cache(clear_posts=True)
+            # ps.win.callOnFlip(keybd.clock.reset)
+            # ps.win.callOnFlip(keybd.clearEvents)
+            ps.win.callOnFlip(ps.timer.reset)
             ps.win.callOnFlip(ps.set_state,
                 state="stim",
                 block=block,
@@ -209,7 +211,10 @@ def main():
 
             isi.complete()
             # check for simulated key press
-            resp = keybd.getKeys(keyList=['left', 'right'])
+            # resp = keybd.getKeys(keyList=['left', 'right'])
+            # or check post events directly:
+            resp = ps.posts
+            ps.posts = []
 
             if len(resp) == 0:
                 ch = ''
@@ -217,8 +222,10 @@ def main():
                 fb = 'miss'
                 print(f'trial {trial}: miss!', realdir[thisdir])
             else:
-                ch = resp[-1].name
-                rt = resp[-1].rt
+                ch = resp[-1][1]['response']
+                rt = resp[-1][1]['time']
+                # ch = resp[-1].name
+                # rt = resp[-1].rt
                 if ch == realdir[thisdir]:
                     fb = 'correct'
                 else:
