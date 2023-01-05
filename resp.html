@@ -64,6 +64,20 @@ div#right{
 }
     </style>
     <script type="text/javascript">
+async function refresh()
+{
+    let response = await fetch('/status', {
+        method: 'GET',
+    });
+    if (!response.ok) {
+        alert(`Error : ${response.status}, ${response.statusText}`)
+    }
+    var returned = await response.json()
+    // if ( returned.remain == 0 && returned.state == 'isi') {
+    if ( returned.state == 'finished') {
+        location.href = "/"
+    }
+}
 async function choose(which)
 {
     data = {
@@ -77,20 +91,20 @@ async function choose(which)
         },
         body: JSON.stringify(data)
     });
-    if (!response.ok) {
-        alert(`Error : ${response.status}, ${response.statusText}`)
-    }
-    var returned = await response.json()
-    // console.log(returned)
-    if ( returned.remain == 0) {
-        setTimeout(function(){
-            location.href = "/"
-        }, 3000)
-    }
+    // if (!response.ok) {
+    //     alert(`Error : ${response.status}, ${response.statusText}`)
+    // }
+    // var returned = await response.json()
+    // // console.log(returned)
+    // if ( returned.remain == 0) {
+    //     setTimeout(function(){
+    //         location.href = "/"
+    //     }, 3000)
+    // }
 }
     </script>
 </head>
-<body>
+<body onload="setInterval(refresh, 1000)">
     <div class="container left" onmousedown="choose('left')">
     <!--div class="container left" ontouchstart="choose('left')"-->
         <div id="left"></div>
