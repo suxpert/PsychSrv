@@ -7,8 +7,6 @@ import socket
 import json
 import pyautogui
 import threading
-import requests
-import time
 import io
 import sys
 
@@ -258,38 +256,6 @@ class PsychoServer(HTTPServer):
 
     def show_fixation(self):
         self._fixation.draw()
-
-
-def get_remote_state(url, timeout=0.2):
-    try:
-        req = requests.get(url, timeout=timeout)
-        if req.ok and req.headers['Content-type'] == 'application/json':
-            state = req.json()
-        else:
-            state = {
-                'code': req.status_code,
-                'content': req.content,
-            }
-    except Exception as e:
-        state = str(e)
-
-    return state
-
-def wait_remote_state(url, state, interval=0.2, timeout=0.2):
-    while True:
-        try:
-            req = requests.get(url, timeout=timeout)
-            print(req.content)
-            if req.ok and req.headers['Content-type'] == 'application/json':
-                ret = req.json()
-                # print(ret)
-                if 'state' in ret and ret['state'] == state:
-                    return ret
-        # except requests.ConnectionError as e:
-        except Exception as e:
-            print(e)
-            pass
-        time.sleep(interval)
 
 
 def main():
