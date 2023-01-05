@@ -122,12 +122,16 @@ function update_range(slider)
     text.innerText = slider.value
 }
 
-function update_duration()
+async function update_duration()
 {
     var list = document.querySelector("select#ntrials")
     var ntrials = list.selectedOptions[0].text
     var duration = document.querySelector("span#duration")
-    duration.innerText = Math.round(ntrials * 2.5)
+    let response = await fetch('/status', {
+      method: 'GET',
+    });
+    var returned = await response.json()
+    duration.innerText = Math.round(ntrials * (2+returned.isi))
 }
 
 async function submit()
@@ -170,7 +174,7 @@ async function submit()
 }
     </script>
   </head>
-  <body>
+  <body onload="update_duration()">
     <div class="container left">
       <h1>随机点运动任务</h1>
       <figure id="preview">
@@ -247,7 +251,7 @@ async function submit()
               <option>20</option>
             </select>
             组刺激，预计用时约
-            <span id="duration">15</span>
+            <span id="duration">30</span>
             秒
           </div>
         </fieldset>

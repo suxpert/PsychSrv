@@ -11,7 +11,7 @@ from psychopy import core
 from psychopy import visual
 from psychopy import data
 
-from psychopy.hardware import keyboard
+# from psychopy.hardware import keyboard
 from PsychoServer import PsychoServer
 
 
@@ -74,7 +74,7 @@ def randcoh(level, ntrials, factor=None):
 def main():
     # configuration
     countdown = 3
-    dur_isi = 1
+    dur_isi = 2
     blk_iti = 2
 
     # initialization
@@ -86,6 +86,8 @@ def main():
 
     ps = PsychoServer(size=(300,300), port=8080, verbose=True)
     ps.move(0, -50)
+    ps.start()
+
     isi = core.StaticPeriod(win=ps.win)
     # keybd = keyboard.Keyboard(backend='iohub')
 
@@ -102,16 +104,9 @@ def main():
     # always assume a 60Hz screen, the above fps always change
     dur = 1/60
 
-    ps.start()
-    # ps.set_state(state="listening")
-    # ps.show_info(f'Listening at {ps.server_addr}')
-
-    # waiting for connection with an ugly loop
-    # ps.wait_query('get', '/')
-
     block = 0
     while ps.running:
-        ps.set_state(state="waiting")
+        ps.set_state(state="waiting", isi=dur_isi)
         ps.show_info(f'Waiting at\n{ps.server_addr}')
         ps.timer.reset()
 
@@ -240,6 +235,8 @@ def main():
             result['correct'].append(fb)
 
         # after all trials done: report some results
+        ps.show_info(f'block {block} finished')
+        ps.flip()
         np.savez(f'run/rdmtask-{block}-{data.getDateStr()}.npz', **result)
         ps.set_state(state="finished")
         ps.sleep(blk_iti)
