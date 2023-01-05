@@ -81,8 +81,10 @@ async function refresh()
     }
     var returned = await response.json()
     // if ( returned.remain == 0 && returned.state == 'isi') {
-    if (returned.state == 'finished') {
-        location.href = "/"
+    if (response.ok) {
+        if (returned.state == 'finished') {
+            location.href = "/ctrl.html"
+        }
     }
 }
 

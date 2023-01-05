@@ -179,9 +179,11 @@ async function submit()
     }
     // console.log(response.headers)
     // console.log(response.body)
-    setTimeout(function () {
-        location.href = "/resp.html"
-    }, 1000)
+    if (response.ok) {
+        setTimeout(function () {
+            location.href = "/resp.html"
+        }, 1000)
+    }
 }
     </script>
 </head>

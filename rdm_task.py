@@ -89,7 +89,6 @@ def main():
     ps.start()
 
     isi = core.StaticPeriod(win=ps.win)
-    # keybd = keyboard.Keyboard(backend='iohub')
 
     result = {
         'trial': [],
@@ -113,9 +112,25 @@ def main():
         # waiting for configuration with an ugly loop
         ps.clear_cache(clear_posts=True)
         while ps.running:
-            config = ps.wait_query('post', '/')
-            if 'ntrials' in config:
+            param = ps.wait_query('post', '/')
+            if 'ntrials' in param:
+                config = param
                 break
+            elif 'control' in param:
+                if param['control'] == 'replay':
+                    # run next block with the last config
+                    break
+                elif param['control'] == 'restart':
+                    # wait for new config
+                    continue
+                elif param['control'] == 'finish':
+                    break
+
+        ps.visible(True)
+        if 'control' in param and param['control'] == 'finish':
+            # end the block loop
+            break
+
         ps.set_state(state="prepare")
         block += 1
 
@@ -168,10 +183,7 @@ def main():
             dots.dir = 180 * (1 - thisdir)
             dots.coherence = thiscoh / 100
 
-            # ps.clear_cache()
             ps.clear_cache(clear_posts=True)
-            # ps.win.callOnFlip(keybd.clock.reset)
-            # ps.win.callOnFlip(keybd.clearEvents)
             ps.win.callOnFlip(ps.timer.reset)
             ps.win.callOnFlip(ps.set_state,
                 state="stim",
@@ -205,9 +217,7 @@ def main():
             # ps.sync_frame()
 
             isi.complete()
-            # check for simulated key press
-            # resp = keybd.getKeys(keyList=['left', 'right'])
-            # or check post events directly:
+            # check post events directly for remote response:
             resp = ps.posts
             ps.posts = []
 
@@ -234,12 +244,22 @@ def main():
             result['rt'].append(rt)
             result['correct'].append(fb)
 
+            ps.flip()
+            # optional: wait for model response
+            # ps.wait_query('post', '/resp')
+
         # after all trials done: report some results
         ps.show_info(f'block {block} finished')
         ps.flip()
         np.savez(f'run/rdmtask-{block}-{data.getDateStr()}.npz', **result)
         ps.set_state(state="finished", isi=dur_isi)
         ps.sleep(blk_iti)
+        ps.visible(False)
+
+    ps.show_info('Bye!')
+    ps.flip()
+    ps.sleep(blk_iti)
+    ps.__del__()
 
 
 if __name__ == '__main__':
