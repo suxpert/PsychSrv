@@ -238,7 +238,7 @@ def main():
         ps.show_info(f'block {block} finished')
         ps.flip()
         np.savez(f'run/rdmtask-{block}-{data.getDateStr()}.npz', **result)
-        ps.set_state(state="finished")
+        ps.set_state(state="finished", isi=dur_isi)
         ps.sleep(blk_iti)
 
 

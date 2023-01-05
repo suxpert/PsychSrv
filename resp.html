@@ -26,7 +26,7 @@ body {
     width: 81vw;
 }
 
-div.container{
+div.container {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -37,29 +37,29 @@ div.container{
     background-color: black;
     cursor: pointer;
 }
-div.container > div{
+div.container > div {
     height: 20vh;
     width: 10vw;
     background-color: gray;
 }
-div.container:hover > div{
+div.container:hover > div {
     background-color: darkgray;
 }
-div.container:active > div{
+div.container:active > div {
     background-color: lightgray;
 }
-div.left{
+div.left {
     float: left;
     border-radius: 5vh 0 0 5vh;
 }
-div.right{
+div.right {
     float: right;
     border-radius: 0 5vh 5vh 0;
 }
-div#left{
+div#left {
     clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
 }
-div#right{
+div#right {
     clip-path: polygon(0% 0%, 0% 100%, 100% 50%);
 }
     </style>
@@ -91,16 +91,6 @@ async function choose(which)
         },
         body: JSON.stringify(data)
     });
-    // if (!response.ok) {
-    //     alert(`Error : ${response.status}, ${response.statusText}`)
-    // }
-    // var returned = await response.json()
-    // // console.log(returned)
-    // if ( returned.remain == 0) {
-    //     setTimeout(function(){
-    //         location.href = "/"
-    //     }, 3000)
-    // }
 }
     </script>
 </head>
