@@ -16,6 +16,7 @@ html {
     color: white;
     height: 100vh;
     width: 100vw;
+    font-family: Arial, Helvetica, sans-serif;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -35,6 +36,19 @@ div.container {
     padding: auto;
 }
 
+div.button {
+    margin: 0 auto;
+}
+
+div.button:hover {
+    cursor: pointer;
+    transform: scale(1.1);
+}
+
+div.button:active {
+    transform: scale(1.2);
+}
+
 div#title {
     font-size: xx-large;
     line-height: 300%;
@@ -43,11 +57,13 @@ div#title {
 img {
     width: 56px;
     height: 56px;
+    vertical-align: middle;
 }
 
 span {
-    font-size: larger;
+    font-size: x-large;
     line-height: 200%;
+    vertical-align: middle;
 }
     </style>
     <script type="text/javascript">
@@ -76,15 +92,15 @@ async function control(command, url) {
     <div class="container">
         <div>
             <div id="title">本轮任务结束</div>
-            <div onclick="control('replay', '/resp.html')">
+            <div class="button" onclick="control('replay', '/resp.html')">
                 <img src="res/replay.png" alt="再来" />
                 <span>再来一遍</span>
             </div>
-            <div onclick="control('restart', '/')">
+            <div class="button" onclick="control('restart', '/')">
                 <img src="res/home.png" alt="重开" />
                 <span>重新开始</span>
             </div>
-            <div onclick="control('finish', '/end.html')">
+            <div class="button" onclick="control('finish', '/end.html')">
                 <img src="res/end.png" alt="结束" />
                 <span>结束任务</span>
             </div>

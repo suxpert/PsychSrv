@@ -64,6 +64,7 @@ div.aligned {
     width: 40vw;
     height: 5vh;
     text-align: left;
+    vertical-align: middle;
 }
 
 fieldset {
@@ -94,6 +95,7 @@ input[name=flavor]:checked + img {
 
 input[type=range] {
     width: 75%;
+    vertical-align: middle;
 }
 
 input[type=number] {
@@ -108,10 +110,15 @@ div#submit {
     background-image: url('res/start.png');
     width: 92px;
     height: 127px;
+    filter: opacity(60%);
 }
 
 div#submit:hover {
-    outline: thin solid gray;
+    outline: thin solid darkgray;
+    filter: opacity(80%);
+}
+div#submit:active {
+    filter: opacity(100%);
 }
     </style>
     <script type="text/javascript">
