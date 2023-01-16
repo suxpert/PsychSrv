@@ -13,12 +13,13 @@ from PIL import Image
 class PsychoClient():
     def __init__(self, ip, port, verbose=True):
         self.address = f'http://{ip}:{port}'
+        self.session = requests.Session()
         self.verbose = verbose
 
     def get_state(self, timeout=0.2):
         url = self.address + '/status'
         try:
-            req = requests.get(url, timeout=timeout)
+            req = self.session.get(url, timeout=timeout)
             if req.ok and req.headers['Content-Type'] == 'application/json':
                 state = req.json()
             else:
@@ -35,7 +36,7 @@ class PsychoClient():
         url = self.address + '/status'
         while True:
             try:
-                req = requests.get(url, timeout=timeout)
+                req = self.session.get(url, timeout=timeout)
                 if self.verbose:
                     print(req.content)
                 if req.ok and req.headers['Content-Type'] == 'application/json':
@@ -52,7 +53,7 @@ class PsychoClient():
         # url = self.address + '/frame'
         url = self.address + '/image'
         try:
-            req = requests.get(url, stream=True, timeout=timeout)
+            req = self.session.get(url, stream=True, timeout=timeout)
             print(req.headers)
             if req.ok and req.headers['Content-Type'] == 'image/png':
                 req.raw.decode_content = True
@@ -74,7 +75,7 @@ class PsychoClient():
         url = self.address + '/image'
         while True:
             try:
-                req = requests.get(url, stream=True, timeout=timeout)
+                req = self.session.get(url, stream=True, timeout=timeout)
                 if req.ok and req.headers['Content-Type'] == 'image/png':
                     req.raw.decode_content = True
                     img = Image.open(req.raw, formats=['png'])
