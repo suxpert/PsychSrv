@@ -5,6 +5,15 @@
 *.bak
 *~
 
+# archive
+*.zip
+*.gz
+
+# saved data
+*.npy
+*.npz
+*.mat
+
 # macOS garbage
 .DS_Store
 .AppleDouble

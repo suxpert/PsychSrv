@@ -36,6 +36,24 @@ div.container {
     padding: auto;
 }
 
+a {
+    text-decoration: none;
+    color: white;
+}
+
+div.button {
+    margin: 0 auto;
+}
+
+div.button:hover {
+    cursor: pointer;
+    transform: scale(1.1);
+}
+
+div.button:active {
+    transform: scale(1.2);
+}
+
 div#title {
     font-size: xx-large;
     line-height: 300%;
@@ -44,11 +62,13 @@ div#title {
 img {
     width: 56px;
     height: 56px;
+    vertical-align: middle;
 }
 
 span {
     font-size: larger;
     line-height: 200%;
+    vertical-align: middle;
 }
     </style>
 </head>
@@ -57,6 +77,12 @@ span {
     <div class="container">
         <div>
             <div id="title">演示结束，感谢参与</div>
+            <a class="button" href="/">
+                <div class="button">
+                    <img src="res/home.png" alt="重开" />
+                    <span>重新开始</span>
+                </div>
+            </a>
         </div>
     </div>
     <!-- <footer>Copyright (C) 2022  LiTuX, all wrongs reserved.</footer> -->
