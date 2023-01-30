@@ -3,7 +3,6 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="screen-orientation" content="landscape">
@@ -58,18 +57,34 @@ figure>img {
     height: auto;
 }
 
+figcaption {
+    margin-top: 5vh;
+    font-size: x-large;
+}
+
 div.aligned {
     margin: 2vh auto;
     padding: 0;
-    width: 40vw;
-    height: 5vh;
-    text-align: left;
+    width: 90%;
+    /* text-align: left; */
     vertical-align: middle;
 }
 
 fieldset {
-    margin: 1.0vh 0;
+    margin: 1.5vh 0;
+}
+fieldset#dottype {
     text-align: center;
+}
+fieldset#more {
+    /* visibility: hidden; */
+    display: inline-block;
+    margin: 1.0vh 0;
+    width: calc(45vw - 140px);
+    border-color: rgba(0, 0, 0, 0);
+}
+fieldset#more>legend {
+    cursor: pointer;
 }
 
 input[name=flavor] {
@@ -93,9 +108,21 @@ input[name=flavor]:checked + img {
     outline: 2px solid darkgray;
 }
 
+datalist {
+    display: flex;
+    flex-direction: column;
+    justify-content:space-between;
+    writing-mode:vertical-lr;
+    width: 100%;
+}
+
 input[type=range] {
-    width: 75%;
     vertical-align: middle;
+    width: 70%;
+}
+
+input[name=difficulty] {
+    width: 100%;
 }
 
 input[type=number] {
@@ -103,6 +130,7 @@ input[type=number] {
 }
 
 div#submit {
+    margin-top: 6.0vh;
     float: right;
     border: 0px;
     cursor: pointer;
@@ -124,18 +152,45 @@ div#submit:active {
     <script type="text/javascript">
 function update_preview(radio)
 {
+    document.documentElement.style['background'] = '#1E1E1E'
     var type = radio.value
     var dir  = 180 * (Math.random() < 0.5)
     var preview = document.querySelector("figure#preview>img")
     var caption = document.querySelector("figure#preview>figcaption")
     preview.src = "res/demo_" + type + "-" + dir + ".gif"
-    caption.innerText = type
+    var temp = type.split('-')
+    if (temp[0] == 'same') {
+        caption.innerHTML = '相干点总是相干点'
+    } else {
+        caption.innerHTML = '相干点与噪声点随机互换'
+    }
+    caption.innerHTML += '<br />'
+    if (temp[1] == 'position') {
+        caption.innerHTML += '噪声点随机出现在任意位置'
+    } else if (temp[1] == 'walk') {
+        caption.innerHTML += '噪声点进行随机游走'
+    } else {
+        caption.innerHTML += '噪声点沿随机方向运动'
+    }
 }
 
 function update_range(slider)
 {
     var text = document.querySelector("span#" + slider.name)
     text.innerText = slider.value
+}
+
+function toggle_more()
+{
+    var frame = document.querySelector("fieldset#more")
+    var more = document.querySelector("div#more")
+    var hidden = more.hidden
+    if (hidden) {
+        frame.style['border-color'] = 'lightgray'
+    } else {
+        frame.style['border-color'] = 'rgba(0,0,0,0)'
+    }
+    more.hidden = ! more.hidden
 }
 
 async function update_duration()
@@ -156,20 +211,22 @@ async function submit()
 {
     var form  = document.querySelector("form")
     var type  = form.querySelector("input[name=flavor]:checked").value.split('-')
-    var coh   = form.querySelector("input[name=coherence]").value
+    var diff  = form.querySelector("input[name=difficulty]").value
+    var size  = form.querySelector("input[name=size]").value
     var speed = form.querySelector("input[name=speed]").value
     var ndots = form.querySelector("input[name=ndots]").value
+    var life  = form.querySelector("input[name=life]").value
     var ntrials = form.querySelector("select#ntrials").value
 
     data = {
         'signal': type[0],
         'noise': type[1],
         'ndots': parseInt(ndots),
-        'size': 5,
-        'life': 5,
+        'size': parseInt(size),
+        'life': parseInt(life),
         'duration': 2,
         'speed': parseInt(speed),
-        'coherence': parseInt(coh),
+        'coherence': 80-10*parseInt(diff),
         'ntrials': parseInt(ntrials),
         'response': "enter",
     }
@@ -191,6 +248,26 @@ async function submit()
             location.href = "/resp.html"
         }, 1000)
     }
+    // var fid = 0
+    // if (response.ok && fid == 0) {
+    //     fid = setInterval(jump, 1000)
+    // }
+}
+
+async function jump()
+{
+    let response = await fetch('/status', {
+        method: 'GET',
+    });
+    if (!response.ok) {
+        alert(`Error : ${response.status}, ${response.statusText}`)
+    }
+    var returned = await response.json()
+    if (response.ok) {
+        if (returned.state == 'prepare') {
+            location.href = "/resp.html"
+        }
+    }
 }
     </script>
 </head>
@@ -199,7 +276,7 @@ async function submit()
     <div class="container left">
         <h1>随机点运动任务</h1>
         <figure id="preview">
-            <img src='' />
+            <img src="" alt=""/>
             <figcaption>
             </figcaption>
         </figure>
@@ -235,35 +312,26 @@ async function submit()
                 </label>
             </fieldset>
             <fieldset>
-                <legend>调整参数</legend>
+                <legend>参数设置</legend>
                 <div class="aligned">
-                    <label>难度: </label>
-                    <input type="range" name="coherence" min="10" max="80" value="40" step="10"
-                        oninput="update_range(this)">
-                    <span id="coherence">40</span>
+                    <input type="range" name="difficulty" min="1" max="7" value="4" list="values">
+                    <datalist id="values">
+                        <option value="1" label="容易"></option>
+                        <option value="2" label="较易"></option>
+                        <option value="3" label="偏易"></option>
+                        <option value="4" label="中等"></option>
+                        <option value="5" label="偏难"></option>
+                        <option value="6" label="较难"></option>
+                        <option value="7" label="困难"></option>
+                    </datalist>
                 </div>
                 <div class="aligned">
-                    <label> 速度: </label>
-                    <input type="range" name="speed" min="1" max="9" value="2" oninput="update_range(this)">
-                    <span id="speed">2</span>
-                </div>
-                <div class="aligned">
-                    <label> 密度: </label>
-                    <input type="range" name="ndots" min="100" max="500" value="300" step="50"
-                        oninput="update_range(this)">
-                    <span id="ndots">200</span>
-                </div>
-            </fieldset>
-            <fieldset>
-                <legend>设置次数</legend>
-                <div class="aligned">
-                    共
-                    <!--input id="ntrials" type="number" name="ntrials", min="3", max="20", value="8">
-            <input list="trials" id="ntrials" name="ntrials" />
-            <datalist id="trials"-->
+                    <label for="ntrials">共</label>
                     <select id="ntrials" name="ntrials" onchange="update_duration()">
+                        <!--
                         <option>4</option>
                         <option>6</option>
+                        -->
                         <option>8</option>
                         <option selected="selected">9</option>
                         <option>10</option>
@@ -279,11 +347,37 @@ async function submit()
                     秒
                 </div>
             </fieldset>
+            <fieldset id="more">
+                <legend onclick="toggle_more()">更多设置</legend>
+                <div id="more" hidden="true">
+                <div class="aligned">
+                    <label>大小: </label>
+                    <input type="range" name="size" min="1" max="9" value="5" oninput="update_range(this)">
+                    <span id="size">5</span>
+                </div>
+                <div class="aligned">
+                    <label> 速度: </label>
+                    <input type="range" name="speed" min="1" max="9" value="2" oninput="update_range(this)">
+                    <span id="speed">2</span>
+                </div>
+                <div class="aligned">
+                    <label> 密度: </label>
+                    <input type="range" name="ndots" min="100" max="500" value="300" step="50"
+                        oninput="update_range(this)">
+                    <span id="ndots">300</span>
+                </div>
+                <div class="aligned">
+                    <label>生命: </label>
+                    <input type="range" name="life" min="3" max="9" value="5" oninput="update_range(this)">
+                    <span id="life">5</span>
+                </div>
+                </div>
+            </fieldset>
             <!--input type="submit" value=""-->
             <div id="submit" onclick="submit()"></div>
         </form>
     </div>
-    <!-- <footer>Copyright (C) 2022  LiTuX, all wrongs reserved.</footer> -->
+    <!-- <footer>Copyright (C) 2023  LiTuX, all wrongs reserved.</footer> -->
 </body>
 
 </html>
