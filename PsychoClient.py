@@ -15,6 +15,24 @@ class PsychoClient():
         self.address = f'http://{ip}:{port}'
         self.session = requests.Session()
         self.verbose = verbose
+        self.session.verify = True
+
+    def send_command(self, command='noop', timeout=0.2):
+        url = self.address + '/'
+        data = {'control': command}
+        try:
+            req = self.session.post(url, json=data, timeout=timeout)
+            if req.ok and req.headers['Content-Type'] == 'application/json':
+                state = req.json()
+            else:
+                state = {
+                    'code': req.status_code,
+                    'content': req.content,
+                }
+        except Exception as e:
+            state = str(e)
+
+        return state
 
     def get_state(self, timeout=0.2):
         url = self.address + '/status'
@@ -41,8 +59,11 @@ class PsychoClient():
                     print(req.content)
                 if req.ok and req.headers['Content-Type'] == 'application/json':
                     ret = req.json()
-                    if 'state' in ret and ret['state'] == state:
-                        return ret
+                    if 'state' in ret:
+                        if isinstance(state, str) and ret['state'] == state:
+                            return ret
+                        if isinstance(state, list) and ret['state'] in state:
+                            return ret
             # except requests.ConnectionError as e:
             except Exception as e:
                 if self.verbose:
@@ -92,8 +113,11 @@ class PsychoClient():
 
 
 def main():
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+
     client = PsychoClient('127.0.0.1', 8080)
-    client.wait_state('init')
+    client.wait_state(['init', 'waiting'])
     while True:
         state = client.get_state()
         print(state)

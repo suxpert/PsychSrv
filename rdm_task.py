@@ -235,7 +235,7 @@ def main():
                     fb = 'correct'
                 else:
                     fb = 'error'
-                print(f'trial {trial}: {fb}', realdir[thisdir], ch, rt)
+                print(f'\ttrial {trial}: {fb}', realdir[thisdir], ch, rt)
 
             result['trial'].append(trial)
             result['coherence'].append(thiscoh)
@@ -263,5 +263,8 @@ def main():
 
 
 if __name__ == '__main__':
+    # import logging
+    # logging.basicConfig(level=logging.DEBUG)
+
     main()
 

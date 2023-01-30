@@ -60,6 +60,7 @@ class PsychoRequestHandler(SimpleHTTPRequestHandler):
         length = int(self.headers['Content-Length'])
         content = self.rfile.read(length)
 
+        # print(self.headers)
         if self.headers['Content-Type'] == 'application/json':
             param = json.loads(content)
             # print(param)
