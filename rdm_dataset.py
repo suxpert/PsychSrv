@@ -13,31 +13,38 @@ from psychopy import visual
 from psychopy.hardware import keyboard
 
 
-def savestim(frames, filename, coherence=None, direction=None):
+def savestim(frames, filename, coherence=None, direction=None, speed=None):
     gray = []
     for frame in frames:
         gray.append(frame.convert('L'))
     movie = np.stack(gray)
-    np.savez_compressed(filename, stim=movie, coherence=coherence, direction=direction)
+    np.savez_compressed(filename, stim=movie, coherence=coherence, direction=direction, speed=speed)
 
 
 def main():
     # configuration:
     config = {
-        'folder': 'dataset-6',
-        'signaldots': 'different',
-        'noisedots': 'direction',
+        'folder': 'dataset-2',
+        'signaldots': 'same',
+        # 'signaldots': 'different',
+        # 'noisedots': 'position',
+        'noisedots': 'walk',
+        # 'noisedots': 'direction',
         'direction': ['left', 'right'],
-        'coherence': list(range(100)),
+        # 'direction': ['up', 'down'],
+        # 'coherence': list(range(99,0,-1)),
+        'coherence': list(range(40,0,-1)),
         'repeat': 10,
         'ndots': 200,
-        'dotsize': 6,
+        'dotsize': list(range(1, 10)),
         'dotlife': 4,
-        'speed': 2,
+        'speed': list(range(1, 10)),
         'dim': [300, 300],
         'nframes': 120,
         'bgcolor': 'black',
+        # 'bgcolor': 'white',
         'color': 'white',
+        # 'color': 'black',
     }
 
     # some initialization
@@ -79,7 +86,7 @@ def main():
         name='text_instr',
         text='',
         font='Arial',
-        color='white',
+        color=config['color'],
         pos=(0, 0),
         height=24,
     )
@@ -88,8 +95,9 @@ def main():
     text_instr.draw()
     win.flip()
 
-    keybd.waitKeys(keyList=['space', 'enter'])
+    keybd.waitKeys(keyList=['space', 'return'])
 
+    sz = ' abcdefghijklmnopqrst'
     # for c in [60, 50, 40, 30, 20, 10]:
     for c in config['coherence']:
         for d in config['direction']:
@@ -97,45 +105,53 @@ def main():
                 a = 180
             elif d == 'right':
                 a = 0
+            elif d == 'up':
+                a = 90
+            elif d == 'down':
+                a = 270
 
-            for r in range(config['repeat']):
+            for v in config['speed']:
+                for s in config['dotsize']:
+                    for r in range(config['repeat']):
 
-                text_instr.setText(f'c{c}{d[0]}-{r}')
-                text_instr.draw()
-                win.flip()
-                core.wait(0.5)
+                        fname = f'{sz[s]}{c:02d}{d[0]}{v}-{r:02d}'
+                        text_instr.setText(fname)
+                        text_instr.draw()
+                        win.flip()
+                        core.wait(0.1)
 
-                dots = visual.DotStim(
-                    win=win,
-                    signalDots=config['signaldots'],
-                    noiseDots=config['noisedots'],
-                    nDots=config['ndots'],
-                    dotSize=config['dotsize'],
-                    dotLife=config['dotlife'],
-                    speed=config['speed'],
-                    dir=a,
-                    coherence=c/100,
-                    fieldPos=(0, 0),
-                    fieldSize=270,
-                    fieldAnchor='center',
-                    fieldShape='circle',
-                    color=config['color'],
-                )
+                        dots = visual.DotStim(
+                            win=win,
+                            signalDots=config['signaldots'],
+                            noiseDots=config['noisedots'],
+                            nDots=config['ndots'],
+                            dotSize=s,
+                            dotLife=config['dotlife'],
+                            speed=v,
+                            dir=a,
+                            coherence=c/100,
+                            fieldPos=(0, 0),
+                            fieldSize=270,
+                            fieldAnchor='center',
+                            fieldShape='circle',
+                            color=config['color'],
+                        )
 
-                # skip the very first frame?
-                # dots.draw()
-                # win.flip()
+                        # skip the very first frame?
+                        # dots.draw()
+                        # win.flip()
 
-                for ff in range(config['nframes']):
-                    dots.draw()
-                    win.flip()
-                    win.getMovieFrame()
-                    if keybd.getKeys(keyList=["escape"]):
-                        core.quit()
+                        for ff in range(config['nframes']):
+                            dots.draw()
+                            win.flip()
+                            win.getMovieFrame()
+                            # if keybd.getKeys(keyList=["escape"]):
+                            if keybd.getKeys(keyList=["pause"]):
+                                core.quit()
 
-                win.flip()
-                savestim(win.movieFrames, f'{folder}/c{c}{d[0]}-{r}.npz', c, d)
-                win.movieFrames = []
+                        win.flip()
+                        savestim(win.movieFrames, f'{folder}/{fname}.npz', c, d, v)
+                        win.movieFrames = []
 
 
 if __name__ == '__main__':
