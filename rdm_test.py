@@ -1,0 +1,294 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from __future__ import division
+
+import os
+import numpy as np
+import random
+
+from psychopy import core
+from psychopy import visual
+from psychopy import data
+
+# from psychopy.hardware import keyboard
+from PsychoServer import PsychoServer
+
+
+def savestim(frames, filename, coherence=None, direction=None):
+    gray = []
+    for frame in frames:
+        gray.append(frame.convert('L'))
+    movie = np.stack(gray)
+    np.savez_compressed(filename, stim=movie, coherence=coherence, direction=direction)
+
+
+def randcoh(level, ntrials, factor=None):
+    adapt = [
+        [-1,  1] * 2,
+        [-1,  1] * 3,
+        [-1,  1] * 4,
+        [-1,  1] * 5,
+        # [-1,  1] * 6,
+        [-1,  0,  1] * 2,
+        [-1,  0,  1] * 3,
+        [-1,  0,  1] * 4,
+        [-1,  0,  1] * 5,
+        [-1,  0,  1] * 6,
+        [-3, -1,  1,  3] * 2,
+        [-3, -1,  1,  3] * 3,
+        [-3, -1,  1,  3] * 4,
+        [-3, -1,  1,  3] * 5,
+        [-2, -1,  0,  1,  2] * 2,
+        [-2, -1,  0,  1,  2] * 3,
+        [-2, -1,  0,  1,  2] * 4,
+        [-5, -3, -1,  1,  3,  5] * 2,
+        [-5, -3, -1,  1,  3,  5] * 3,
+        [-3, -2, -1,  0,  1,  2,  3] * 2,
+        # [-7, -5, -3, -1,  1,  3,  5,  7],
+        # [-5, -3, -2, -1,  0,  1,  2,  3, 5],
+    ]
+    scale = [
+        [],
+        [5,15],
+        [3,8],
+        [2,5],
+        [1,4],
+        [1,3],
+    ]
+    cands = [l for l in adapt if len(l) == ntrials]
+    if len(cands) == 0:
+        cands = [l for l in adapt if len(l) == ntrials+1]
+    if len(cands) == 0:
+        cands = [l for l in adapt if len(l) == ntrials+2]
+
+    choose = random.choice(cands)
+
+    if factor is None:
+        tmp = scale[max(choose)]
+        factor = np.random.randint(tmp[0],tmp[1])
+    coherence = level + np.array(choose) * factor
+    return coherence
+
+
+def main():
+    # configuration
+    countdown = 3
+    dur_isi = 2
+    blk_iti = 2
+
+    # initialization
+    cwd = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(cwd)
+
+    if not os.path.isdir('run'):
+        os.mkdir('run')
+
+    ps = PsychoServer(size=(300,300), port=8080, verbose=True)
+    ps.move(0, -50)
+    ps.start()
+
+    isi = core.StaticPeriod(win=ps.win)
+
+    result = {
+        'trial': [],
+        'coherence': [],
+        'direction': [],
+        'response': [],
+        'rt': [],
+        'correct': [],
+    }
+
+    print(f'Refresh rate = {ps.fps} Hz')
+    # always assume a 60Hz screen, the above fps always change
+    dur = 1/60
+
+    block = 0
+    while ps.running:
+        ps.set_state(state="waiting", isi=dur_isi)
+        ps.show_info(f'Waiting at\n{ps.server_addr}')
+        ps.timer.reset()
+
+        # waiting for configuration with an ugly loop
+        ps.clear_cache(clear_posts=True)
+        while ps.running:
+            param = ps.wait_query('post', '/')
+            if 'ntrials' in param:
+                config = param
+                break
+            elif 'control' in param:
+                if param['control'] == 'replay':
+                    # run next block with the last config
+                    break
+                elif param['control'] == 'restart':
+                    # wait for new config
+                    continue
+                elif param['control'] == 'finish':
+                    break
+
+        ps.visible(True)
+        if 'control' in param and param['control'] == 'finish':
+            # end the block loop
+            break
+
+        ps.set_state(state="prepare")
+        block += 1
+
+        # config = {
+        #     'signal': 'same',
+        #     'noise': 'direction',
+        #     'ndots': 300,
+        #     'size': 5,
+        #     'life': 3,
+        #     'speed': 3,
+        #     'ntrials': 8,
+        #     'duration': 2,
+        # }
+
+        ntrials = config['ntrials']
+
+        # the dot stimulus have to be create after configuration
+        dota = visual.DotStim(
+            win=ps.win,
+            name='dota',
+            signalDots=config['signal'],
+            noiseDots=config['noise'],
+            nDots=config['ndots']//2,
+            dotSize=config['size'],
+            speed=config['speed'],
+            dotLife=config['life'],
+            dir=0,
+            coherence=0.5,
+            fieldPos=(0, 0),
+            fieldSize=270,
+            # fieldAnchor='center',
+            fieldShape='circle',
+            color='white',
+        )
+        dotb = visual.DotStim(
+            win=ps.win,
+            name='dotb',
+            signalDots=config['signal'],
+            noiseDots=config['noise'],
+            nDots=config['ndots']//2,
+            dotSize=config['size'],
+            speed=config['speed'],
+            dotLife=config['life'],
+            dir=0,
+            coherence=0.5,
+            fieldPos=(0, 0),
+            fieldSize=270,
+            # fieldAnchor='center',
+            fieldShape='circle',
+            color='black',
+        )
+
+        # counting down
+        for ff in range(int(countdown/dur)):
+            ps.show_info(f'{ntrials} trials for block {block}\nin {countdown-int(ff*dur)}')
+            ps.flip()
+        ps.show_info()
+
+        # prepare trial order and loop for trials
+        coherence = randcoh(config['coherence'], ntrials)
+        for trial in range(ntrials):
+            # the trial:
+            realdir = ['left', 'right']
+            thisdir = np.random.randint(2)
+            thiscoh = coherence[trial]
+
+            dota.dir = 180 * (1 - thisdir)
+            dota.coherence = thiscoh / 100
+            dotb.dir = 180 * (1 - thisdir)
+            dotb.coherence = thiscoh / 100
+
+            ps.clear_cache(clear_posts=True)
+            ps.win.callOnFlip(ps.timer.reset)
+            ps.win.callOnFlip(ps.set_state,
+                state="stim",
+                block=block,
+                trial=trial,
+                remain=ntrials-trial-1,
+                direction=realdir[thisdir],
+                coherence=int(thiscoh),
+            )
+
+            nframes = int(config['duration']/dur)
+            for ff in range(nframes):
+                dota.draw()
+                dotb.draw()
+                ps.show_fixation()
+                ps.flip(True)
+                if ff%2 == 0:
+                    a, b = dota.color, dotb.color
+                    dota.setColor(b)
+                    dotb.setColor(a)
+
+            # save an extra blank screen for separation in frame streams
+            ps.show_fixation()
+            ps.flip(True)
+
+            isi.start(dur_isi)
+            savestim(ps.win.movieFrames, f'run/block-{block}_trial-{trial}.npz', thiscoh, realdir[thisdir])
+            # set status after stimulus saved, so that client can wait for isi as an event
+            ps.set_state(
+                state="isi",
+                block=block,
+                trial=trial,
+                remain=ntrials-trial-1,
+            )
+            # or wait until all frames have been fetched
+            # ps.sync_frame()
+
+            isi.complete()
+            # check post events directly for remote response:
+            resp = ps.posts
+            ps.posts = []
+
+            if len(resp) == 0:
+                ch = ''
+                rt = np.nan
+                fb = 'miss'
+                print(f'trial {trial}: miss!', realdir[thisdir])
+            else:
+                ch = resp[-1][1]['response']
+                rt = resp[-1][1]['time']
+                # ch = resp[-1].name
+                # rt = resp[-1].rt
+                if ch == realdir[thisdir]:
+                    fb = 'correct'
+                else:
+                    fb = 'error'
+                print(f'\ttrial {trial}: {fb}', realdir[thisdir], ch, rt)
+
+            result['trial'].append(trial)
+            result['coherence'].append(thiscoh)
+            result['direction'].append(realdir[thisdir])
+            result['response'].append(ch)
+            result['rt'].append(rt)
+            result['correct'].append(fb)
+
+            ps.flip()
+            # optional: wait for model response
+            # ps.wait_query('post', '/resp')
+
+        # after all trials done: report some results
+        ps.show_info(f'block {block} finished')
+        ps.flip()
+        np.savez(f'run/rdmtask-{block}-{data.getDateStr()}.npz', **result)
+        ps.set_state(state="finished", isi=dur_isi)
+        ps.sleep(blk_iti)
+        ps.visible(False)
+
+    ps.show_info('Bye!')
+    ps.flip()
+    ps.sleep(blk_iti)
+    ps.__del__()
+
+
+if __name__ == '__main__':
+    # import logging
+    # logging.basicConfig(level=logging.DEBUG)
+
+    main()
+
